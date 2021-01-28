@@ -107,6 +107,7 @@ def EXAMPLE_002(params):
     solver_tol = params['solver_tol']
     solver_lambda_min = params['solver_lambda_min']
     max_nr_levels = params['max_nr_levels']
+    trace_ml_constr = params['trace_multilevel_construction']
 
     trace_params = dict()
     solver_params = dict()
@@ -117,6 +118,7 @@ def EXAMPLE_002(params):
     trace_params['tol'] = trace_tol
     trace_params['max_nr_ests'] = 1000000
     trace_params['max_nr_levels'] = max_nr_levels
+    trace_params['multilevel_construction'] = trace_ml_constr
     result = mlmc(A, solver, trace_params)
 
     print(" -- matrix : "+matrix_name)

@@ -7,7 +7,7 @@ from math import sqrt
 import pyamg
 from utils import flopsV
 from pyamg.aggregation.adaptive import adaptive_sa_solver
-
+from aggregation import manual_aggregation
 
 
 
@@ -120,21 +120,57 @@ def mlmc(A, solver, params):
     # trace params
     trace_tol = params['tol']
     trace_max_nr_ests = params['max_nr_ests']
+    trace_ml_constr = params['multilevel_construction']
 
     # size of the problem
     N = A.shape[0]
 
     max_nr_levels = params['max_nr_levels']
 
-    print("\nRunning MG setup for finest level ...")
-    #ml = pyamg.smoothed_aggregation_solver(A)
-    #[ml, work] = adaptive_sa_solver(A, num_candidates=5, improvement_iters=5)
-    [ml, work] = adaptive_sa_solver(A, num_candidates=2, candidate_iters=2, improvement_iters=3,
-                                    strength='symmetric', aggregate='standard', max_levels=max_nr_levels)
+    print("\nRunning MG setup from finest level ...")
+    if trace_ml_constr=='pyamg':
+        #ml = pyamg.smoothed_aggregation_solver(A)
+        #[ml, work] = adaptive_sa_solver(A, num_candidates=5, improvement_iters=5)
+        [ml, work] = adaptive_sa_solver(A, num_candidates=2, candidate_iters=2, improvement_iters=3,
+                                        strength='symmetric', aggregate='standard', max_levels=max_nr_levels)
+    elif trace_ml_constr=='manual_aggregation':
+
+        # TODO : get <aggr_size> from input params
+        aggr_size = 2
+        aggrs = [aggr_size for i in range(max_nr_levels-1)]
+
+        dof = [2]
+        # TODO : get <dof_size> from input params
+        dof_size = 2
+        [dof.append(dof_size) for i in range(max_nr_levels-1)]
+
+        ml = manual_aggregation(A, dof=dof, aggrs=aggrs, max_levels=max_nr_levels, dim=2)
+
+    else:
+        raise Exception("The specified <trace_multilevel_constructor> does not exist.")
     print("... done")
+
+    exit(0)
 
     print("\nMultilevel information:")
     print(ml)
+
+    # the actual number of levels
+    nr_levels = len(ml.levels)
+
+    #print("\nRunning MG setup for coarser levels ...")
+    print("\nRunning MG setup for each level ...")
+    ml_solvers = list()
+    #ml_solvers.append(ml)
+    #if nr_levels>2:
+    for i in range(nr_levels-1):
+        #mlx = pyamg.smoothed_aggregation_solver(ml.levels[i].A)
+        #[mlx, work] = adaptive_sa_solver(ml.levels[i].A, num_candidates=5, improvement_iters=5)
+        [mlx, work] = adaptive_sa_solver(ml.levels[i].A, num_candidates=2, candidate_iters=2, improvement_iters=3,
+                                         strength='symmetric', aggregate='standard', max_levels=max_nr_levels-i)
+        ml_solvers.append(mlx)
+    print("... done")
+    print("")
 
     print("\nComputing rough estimation of the trace ...")
     # first of all, get a rough estimate of the trace via Hutchinson
@@ -145,7 +181,7 @@ def mlmc(A, solver, params):
     trace_params['solver_params'] = solver_params
     trace_params['tol'] = trace_tol
     trace_params['max_nr_ests'] = 5
-    result = hutchinson(A, ml, trace_params)
+    result = hutchinson(A, ml_solvers[0], trace_params)
     trace = result['trace']
     std_dev = result['std_dev']
     nr_ests = result['nr_ests']
@@ -154,22 +190,6 @@ def mlmc(A, solver, params):
 
     rough_trace = trace
     print("** rough estimation of the trace : "+str(rough_trace))
-
-    # the actual number of levels
-    nr_levels = len(ml.levels)
-
-    print("\nRunning MG setup for coarser levels ...")
-    ml_solvers = list()
-    ml_solvers.append(ml)
-    if nr_levels>2:
-        for i in range(1,nr_levels-1):
-            #mlx = pyamg.smoothed_aggregation_solver(ml.levels[i].A)
-            #[mlx, work] = adaptive_sa_solver(ml.levels[i].A, num_candidates=5, improvement_iters=5)
-            [mlx, work] = adaptive_sa_solver(ml.levels[i].A, num_candidates=2, candidate_iters=2, improvement_iters=3,
-                                             strength='symmetric', aggregate='standard', max_levels=max_nr_levels-i)
-            ml_solvers.append(mlx)
-    print("... done")
-    print("")
 
     #for i in range(nr_levels):
     #    mat_diff = ml.levels[i].A-ml.levels[i].A.H
