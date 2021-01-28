@@ -1,0 +1,7 @@
+Before running, install:
+
+$ sudo pip3 install pyamg
+
+and then, run a simple test/example through:
+
+$ python3 main.py
