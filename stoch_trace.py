@@ -220,6 +220,8 @@ def mlmc(A, solver, params):
     #print(trace_tol)
     #print(level_trace_tol)
 
+    print("")
+
     cummP = sp.sparse.identity(N)
     cummR = sp.sparse.identity(N)
     for i in range(nr_levels-1):

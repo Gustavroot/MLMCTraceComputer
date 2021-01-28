@@ -73,17 +73,16 @@ def manual_aggregation(A, dof=[2,2,2], aggrs=[2,2], max_levels=3, dim=2):
     Ps = list()
     Rs = list()
 
-    Ax = Al.copy()
-    Ax = Ax.getH()
-    print("\n\thermiticity of A at level "+str(0)+" = "+str( norm(Ax-Al,ord='fro')) )
+    #Ax = Al.copy()
+    #Ax = Ax.getH()
+    #print("\n\thermiticity of A at level "+str(0)+" = "+str( norm(Ax-Al,ord='fro')) )
 
-    mat_size_half = int(Al.shape[0]/2)
-    g3Al = Al.copy()
-    g3Al[mat_size_half:,:] = -g3Al[mat_size_half:,:]
-    g3Ax = g3Al.copy()
-    g3Ax = g3Ax.getH()
-
-    print("\thermiticity of g3*A at level "+str(0)+" = "+str( norm(g3Ax-g3Al,ord='fro')) )
+    #mat_size_half = int(Al.shape[0]/2)
+    #g3Al = Al.copy()
+    #g3Al[mat_size_half:,:] = -g3Al[mat_size_half:,:]
+    #g3Ax = g3Al.copy()
+    #g3Ax = g3Ax.getH()
+    #print("\thermiticity of g3*A at level "+str(0)+" = "+str( norm(g3Ax-g3Al,ord='fro')) )
 
     #As.append(A.copy())
 
@@ -140,25 +139,22 @@ def manual_aggregation(A, dof=[2,2,2], aggrs=[2,2], max_levels=3, dim=2):
 
         print("\t... done")
 
-        # TODO : check Gamma3-compability here !!
+        # check Gamma3-compability here !!
+        #P1 = np.copy(Px)
+        #mat_size1_half = int(P1.shape[0]/2)
+        #P1[mat_size1_half:,:] = -P1[mat_size1_half:,:]
+        #P2 = np.copy(Px)
+        #mat_size2_half = int(P1.shape[1]/2)
+        #P2[:,mat_size2_half:] = -P2[:,mat_size2_half:]
+        #diffP = P1-P2
+        #print("\tmeasuring g3-compatibility at level "+str(i)+" : "+str( npnorm(diffP,ord='fro') ))
 
-        P1 = np.copy(Px)
-        mat_size1_half = int(P1.shape[0]/2)
-        P1[mat_size1_half:,:] = -P1[mat_size1_half:,:]
-        P2 = np.copy(Px)
-        mat_size2_half = int(P1.shape[1]/2)
-        P2[:,mat_size2_half:] = -P2[:,mat_size2_half:]
-
-        diffP = P1-P2
-        print("\tmeasuring g3-compatibility at level "+str(i)+" : "+str( npnorm(diffP,ord='fro') ))
-
-        Pl1 = csr_matrix(Px, dtype=Px.dtype)
-        write_png(Pl1,"P1_"+str(i)+".png")
+        #Pl1 = csr_matrix(Px, dtype=Px.dtype)
+        #write_png(Pl1,"P1_"+str(i)+".png")
 
         # ------------------------------------------------------------------------------------
-        # TODO : should I remove orthonormalization? In order to have Gamma3-compatibility
+        # perform a per-aggregate orthonormalization - apply plain CGS
         print("\torthonormalizing by aggregate in P at level "+str(i)+" ...")
-        # TODO : perform a per-aggregate orthonormalization - apply plain CGS
         # spin 0
         for j in range(nr_aggrs):
             for k in range(dof[i+1]):
@@ -188,26 +184,24 @@ def manual_aggregation(A, dof=[2,2,2], aggrs=[2,2], max_levels=3, dim=2):
         print("\t... done")
         # ------------------------------------------------------------------------------------
 
-        Pl2 = csr_matrix(Px, dtype=Px.dtype)
-        write_png(Pl2,"P2_"+str(i)+".png")
+        #Pl2 = csr_matrix(Px, dtype=Px.dtype)
+        #write_png(Pl2,"P2_"+str(i)+".png")
 
-        # TODO : check Gamma3-compability here !!
-
-        P1 = np.copy(Px)
-        mat_size1_half = int(P1.shape[0]/2)
-        P1[mat_size1_half:,:] = -P1[mat_size1_half:,:]
-        P2 = np.copy(Px)
-        mat_size2_half = int(P1.shape[1]/2)
-        P2[:,mat_size2_half:] = -P2[:,mat_size2_half:]
-
-        diffP = P1-P2
-        print("\tmeasuring g3-compatibility at level "+str(i)+" : "+str( npnorm(diffP,ord='fro') ))
+        # check Gamma3-compability here !!
+        #P1 = np.copy(Px)
+        #mat_size1_half = int(P1.shape[0]/2)
+        #P1[mat_size1_half:,:] = -P1[mat_size1_half:,:]
+        #P2 = np.copy(Px)
+        #mat_size2_half = int(P1.shape[1]/2)
+        #P2[:,mat_size2_half:] = -P2[:,mat_size2_half:]
+        #diffP = P1-P2
+        #print("\tmeasuring g3-compatibility at level "+str(i)+" : "+str( npnorm(diffP,ord='fro') ))
 
         Pl = csr_matrix(Px, dtype=Px.dtype)
 
         ml.levels[i].P = Pl.copy()
 
-        print("\tP"+str(i)+".shape = "+str(Pl.shape))
+        #print("\tP"+str(i)+".shape = "+str(Pl.shape))
 
         print("\tconstructing R at level "+str(i)+" ...")
 
@@ -219,16 +213,16 @@ def manual_aggregation(A, dof=[2,2,2], aggrs=[2,2], max_levels=3, dim=2):
 
         ml.levels[i].R = Rl.copy()
 
-        print("\tR"+str(i)+".shape = "+str(Rl.shape))
+        #print("\tR"+str(i)+".shape = "+str(Rl.shape))
 
         print("\t... done")
 
-        axx = Rl*Pl
-        bxx = identity(Pl.shape[1],dtype=Pl.dtype)
-        cxx = axx-bxx
-        #print(axx.shape)
-        #print(bxx.shape)
-        print("\torthonormality of P at level "+str(i)+" = "+str( norm(axx-bxx,ord='fro')) )
+        #axx = Rl*Pl
+        #bxx = identity(Pl.shape[1],dtype=Pl.dtype)
+        #cxx = axx-bxx
+        ##print(axx.shape)
+        ##print(bxx.shape)
+        #print("\torthonormality of P at level "+str(i)+" = "+str( norm(axx-bxx,ord='fro')) )
 
         print("\tconstructing A at level "+str(i+1)+" ...")
 
@@ -238,18 +232,17 @@ def manual_aggregation(A, dof=[2,2,2], aggrs=[2,2], max_levels=3, dim=2):
         ml.levels.append(LevelML())
         ml.levels[i+1].A = Al.copy()
 
-        Ax = Ax.getH()
-        print("\thermiticity of A at level "+str(i+1)+" = "+str( norm(Ax-Al,ord='fro')) )
+        #Ax = Ax.getH()
+        #print("\thermiticity of A at level "+str(i+1)+" = "+str( norm(Ax-Al,ord='fro')) )
 
-        mat_size_half = int(Al.shape[0]/2)
-        g3Al = Al.copy()
-        g3Al[mat_size_half:,:] = -g3Al[mat_size_half:,:]
-        g3Ax = g3Al.copy()
-        g3Ax = g3Ax.getH()
+        #mat_size_half = int(Al.shape[0]/2)
+        #g3Al = Al.copy()
+        #g3Al[mat_size_half:,:] = -g3Al[mat_size_half:,:]
+        #g3Ax = g3Al.copy()
+        #g3Ax = g3Ax.getH()
+        #print("\thermiticity of g3*A at level "+str(i+1)+" = "+str( norm(g3Ax-g3Al,ord='fro')) )
 
-        print("\thermiticity of g3*A at level "+str(i+1)+" = "+str( norm(g3Ax-g3Al,ord='fro')) )
-
-        print("\tA"+str(i+1)+".shape = "+str(Al.shape))
+        #print("\tA"+str(i+1)+".shape = "+str(Al.shape))
 
         print("\t... done")
 
