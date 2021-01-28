@@ -42,7 +42,7 @@ if __name__=='__main__':
     params['trace_multilevel_construction'] = 'manual_aggregation'
     params['solver_tol'] = 1e-4
     params['solver_lambda_min'] = 1e-2
-    params['max_nr_levels'] = 5
+    params['max_nr_levels'] = 15
     EXAMPLE_002(params)
 
     # --------------------------------
@@ -77,5 +77,5 @@ if __name__=='__main__':
     #params['multilevel_construction'] = 'manual_aggregation'
     params['solver_tol'] = 1e-4
     #params['solver_use_mg'] = True
-    params['max_nr_levels'] = 5
+    params['max_nr_levels'] = 15
     EXAMPLE_001(params)

@@ -150,13 +150,13 @@ def mlmc(A, solver, params):
         raise Exception("The specified <trace_multilevel_constructor> does not exist.")
     print("... done")
 
-    exit(0)
-
     print("\nMultilevel information:")
     print(ml)
 
     # the actual number of levels
     nr_levels = len(ml.levels)
+
+    #exit(0)
 
     #print("\nRunning MG setup for coarser levels ...")
     print("\nRunning MG setup for each level ...")
