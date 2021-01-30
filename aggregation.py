@@ -64,6 +64,14 @@ def manual_aggregation(A, dof=[2,2,2], aggrs=[2,2], max_levels=3, dim=2):
     # assuming a (roughly) minimum coarsest-level size for the matrix
     min_coarsest_size = 8
 
+    # FIXME
+    max_levels=2
+
+    if max_levels>2:
+        raise Exception("FIXME : this code needs to be fixed for levels>2; the aggregation"+
+                        " is being done wrong! Spin-wise separation is being done right from the"+
+                        " first to the second level, but not correct afterwards")
+
     # TODO : check what is the actual maximum number of levels possible. For
     #        now, just assume max_levels is possible
 
@@ -153,6 +161,7 @@ def manual_aggregation(A, dof=[2,2,2], aggrs=[2,2], max_levels=3, dim=2):
         #write_png(Pl1,"P1_"+str(i)+".png")
 
         # ------------------------------------------------------------------------------------
+        #"""
         # perform a per-aggregate orthonormalization - apply plain CGS
         print("\torthonormalizing by aggregate in P at level "+str(i)+" ...")
         # spin 0
@@ -182,20 +191,21 @@ def manual_aggregation(A, dof=[2,2,2], aggrs=[2,2], max_levels=3, dim=2):
                     Px[ii_off_1:ii_off_2,jj_off+k] -= rs[w]*Px[ii_off_1:ii_off_2,jj_off+w]
                 Px[ii_off_1:ii_off_2,jj_off+k] /= sqrt(np.vdot(Px[ii_off_1:ii_off_2,jj_off+k],Px[ii_off_1:ii_off_2,jj_off+k]))
         print("\t... done")
+        #"""
         # ------------------------------------------------------------------------------------
 
         #Pl2 = csr_matrix(Px, dtype=Px.dtype)
         #write_png(Pl2,"P2_"+str(i)+".png")
 
         # check Gamma3-compability here !!
-        #P1 = np.copy(Px)
-        #mat_size1_half = int(P1.shape[0]/2)
-        #P1[mat_size1_half:,:] = -P1[mat_size1_half:,:]
-        #P2 = np.copy(Px)
-        #mat_size2_half = int(P1.shape[1]/2)
-        #P2[:,mat_size2_half:] = -P2[:,mat_size2_half:]
-        #diffP = P1-P2
-        #print("\tmeasuring g3-compatibility at level "+str(i)+" : "+str( npnorm(diffP,ord='fro') ))
+        P1 = np.copy(Px)
+        mat_size1_half = int(P1.shape[0]/2)
+        P1[mat_size1_half:,:] = -P1[mat_size1_half:,:]
+        P2 = np.copy(Px)
+        mat_size2_half = int(P1.shape[1]/2)
+        P2[:,mat_size2_half:] = -P2[:,mat_size2_half:]
+        diffP = P1-P2
+        print("\tmeasuring g3-compatibility at level "+str(i)+" : "+str( npnorm(diffP,ord='fro') ))
 
         Pl = csr_matrix(Px, dtype=Px.dtype)
 

@@ -1,5 +1,6 @@
 # All the resources needed to load and manipulate matrices
 import warnings
+from scipy.sparse import identity
 
 
 
@@ -44,6 +45,8 @@ def loadMatrix(matrix_name, params):
 
     elif len(matrix_name.split('_'))==2:
 
+        m = 1.5
+
         # get filename and load
         filename = matrix_name.split('_')
         if not filename[0]=='mat':
@@ -54,6 +57,7 @@ def loadMatrix(matrix_name, params):
 
         #print(mat_contents['S'].shape)
         A = mat_contents['S']
+        A += m*identity(A.shape[0], dtype=A.dtype)
 
         #print(matrix_name)
         #exit(0)
