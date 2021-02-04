@@ -9,7 +9,9 @@ from stoch_trace import hutchinson, mlmc
 # this example assumes the matrix is Hermitian, and computes via Hutchinson
 def EXAMPLE_001(params):
 
-    print("\nExample 01 : computing tr(A^{-1}) with Hutchinson\n")
+    print("\n-------------------------------------------------")
+    print("Example 01 : computing tr(A^{-1}) with Hutchinson")
+    print("-------------------------------------------------\n")
 
     # checking input params
     if 'matrix' not in params:
@@ -78,7 +80,9 @@ def EXAMPLE_001(params):
 # this example assumes the matrix is Hermitian, and computes via MLMC
 def EXAMPLE_002(params):
 
-    print("\nExample 02 : computing tr(A^{-1}) with MLMC\n")
+    print("\n-------------------------------------------")
+    print("Example 02 : computing tr(A^{-1}) with MLMC")
+    print("-------------------------------------------\n")
 
     # checking input params
     if 'matrix' not in params:

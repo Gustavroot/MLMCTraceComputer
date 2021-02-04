@@ -87,9 +87,15 @@ def manual_aggregation(A, dof=[2,2,2], aggrs=[2,2], max_levels=3, dim=2):
 
     for i in range(max_levels-1):
 
+        #mat_size = int(Al.shape[0]/2)
+        #Al[mat_size:] = -Al[mat_size:]
+
         print("\teigensolving at level "+str(i)+" ...")
-        eigvals,eig_vecs = eigs(Al, k=dof[i+1], which='SM', return_eigenvectors=True, tol=1e-15)
+        eigvals,eig_vecs = eigs(Al, k=dof[i+1], which='SM', return_eigenvectors=True, tol=1e-9)
         print("\t... done")
+
+        #mat_size = int(Al.shape[0]/2)
+        #Al[mat_size:] = -Al[mat_size:]
 
         print("\tconstructing P at level "+str(i)+" ...")
 

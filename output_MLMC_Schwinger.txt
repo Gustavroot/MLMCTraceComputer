@@ -1,0 +1,73 @@
+
+-------------------------------------------
+Example 02 : computing tr(A^{-1}) with MLMC
+-------------------------------------------
+
+
+Running MG setup from finest level ...
+
+	eigensolving at level 0 ...
+	... done
+	constructing P at level 0 ...
+	... done
+	orthonormalizing by aggregate in P at level 0 ...
+	... done
+	measuring g3-compatibility at level 0 : 0.0
+	constructing R at level 0 ...
+	... done
+	orthonormality of P at level 0 = 9.429932962617206e-14
+	constructing A at level 1 ...
+	hermiticity of A at level 1 = 43.048732290763304
+	hermiticity of g3*A at level 1 = 1.0367986470710786e-14
+	... done
+
+... done
+
+Multilevel information:
+For manual aggregation, printing <ml> is under construction
+
+Running MG setup for each level ...
+... done
+
+Computing rough estimation of the trace ...
+... done 
+
+** rough estimation of the trace : (115.22662046201754+1.414925545617507e-08j)
+
+Computing for level 0...
+... done
+
+ -- matrix : mat_schwinger16x16b3phasenum11000.mat
+ -- matrix size : 512x512
+ -- tr(A^{-1}) = (112.05840916160128-9.487440650558477e-09j)
+ -- total MG complexity = 501.296304 MFLOPS
+ -- std dev = ---
+ -- level : 0
+ 	-- number of estimates = 57
+ 	-- solver iters = 1140
+ 	-- trace = (20.143637726979524-9.448731927143438e-09j)
+ 	-- std dev = 6.1563577262559575
+ -- level MG complexity = 14.16792 MFLOPS
+ -- level : 1
+ 	-- number of estimates = 1002
+ 	-- solver iters = 14837
+ 	-- trace = (91.91477143462176-3.870872341503875e-11j)
+ 	-- std dev = 25.784707972832603
+
+
+
+-------------------------------------------------
+Example 01 : computing tr(A^{-1}) with Hutchinson
+-------------------------------------------------
+
+** rough estimation of the trace : (115.22662046201754+1.414925545617507e-08j)
+
+ -- matrix : mat_schwinger16x16b3phasenum11000.mat
+ -- matrix size : 512x512
+ -- tr(A^{-1}) = (111.80317732727148-2.216933937509052e-09j)
+ -- total MG complexity = 123.248476 MFLOPS
+ -- std dev = 25.821214289147125
+ -- number of estimates = 502
+ -- solver iters = 9917
+
+

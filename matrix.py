@@ -45,7 +45,8 @@ def loadMatrix(matrix_name, params):
 
     elif len(matrix_name.split('_'))==2:
 
-        m = -0.98
+        m = -0.85
+        #m = 0.2
 
         # get filename and load
         filename = matrix_name.split('_')

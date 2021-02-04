@@ -49,6 +49,9 @@ def write_png(A, filename):
 # compute tr(A^{-1}) via Hutchinson
 def hutchinson(A, solver, params):
 
+    # FIXME
+    max_nr_levels = 9
+
     # TODO : check input params !
 
     # solver params
@@ -89,10 +92,7 @@ def hutchinson(A, solver, params):
             x_size = int(x.shape[0]/2)
             x[x_size:] = -x[x_size:]
 
-        #z,num_iters = solver_sparse(A,x,solver_tol,solver,solver_name)
-        Abb = A.todense()
-        z = np.dot(np.linalg.inv(Abb),x)
-        z = np.asarray(z).reshape(-1)
+        z,num_iters = solver_sparse(A,x,solver_tol,solver,solver_name)
 
         if use_Q:
             x_size = int(x.shape[0]/2)
@@ -104,14 +104,14 @@ def hutchinson(A, solver, params):
     rough_trace = np.sum(ests[0:nr_rough_iters])/(nr_rough_iters)
 
     print("** rough estimation of the trace : "+str(rough_trace))
+    print("")
 
     # then, set a rough tolerance
     rough_trace_tol = abs(trace_tol*rough_trace)
     #rough_solver_tol = rough_trace_tol*lambda_min/N
     rough_solver_tol = abs(rough_trace_tol/N)
 
-    #rough_solver_tol *= 0.50e+2
-    rough_solver_tol = 1e-15
+    rough_solver_tol = 1e-9
 
     solver_iters = 0
     ests = np.zeros(trace_max_nr_ests, dtype=A.dtype)
@@ -129,11 +129,7 @@ def hutchinson(A, solver, params):
             x_size = int(x.shape[0]/2)
             x[x_size:] = -x[x_size:]
 
-        #z,num_iters = solver_sparse(A,x,rough_solver_tol,solver,solver_name)
-        Abb = A.todense()
-        z = np.dot(np.linalg.inv(Abb),x)
-        z = np.asarray(z).reshape(-1)
-        num_iters = 0
+        z,num_iters = solver_sparse(A,x,rough_solver_tol,solver,solver_name)
 
         solver_iters += num_iters
 
@@ -154,7 +150,7 @@ def hutchinson(A, solver, params):
         #print(str(i)+" .. "+str(ests_avg)+" .. "+str(rough_trace)+" .. "+str(error_est)+" .. "+str(rough_trace_tol)+" .. "+str(num_iters))
 
         # break condition
-        if i>11 and error_est<rough_trace_tol:
+        if i>5 and error_est<rough_trace_tol:
             break
 
     result = dict()
@@ -189,7 +185,7 @@ def mlmc(A, solver, params):
     # size of the problem
     N = A.shape[0]
 
-    # FIXME : hardcoding this for now, as aggregation.py needs to be fixed for more than 2 levels
+    # FIXME : hardcoding this as aggregation.py needs to be fixed
     max_nr_levels = 2
 
     print("\nRunning MG setup from finest level ...")
@@ -204,7 +200,7 @@ def mlmc(A, solver, params):
         aggrs = [aggr_size for i in range(max_nr_levels-1)]
         dof = [2]
         # TODO : get <dof_size> from input params
-        dof_size = 4
+        dof_size = 8
         [dof.append(dof_size) for i in range(max_nr_levels-1)]
         ml = manual_aggregation(A, dof=dof, aggrs=aggrs, max_levels=max_nr_levels, dim=2)
     else:
@@ -229,6 +225,8 @@ def mlmc(A, solver, params):
         ml_solvers.append(mlx)
     print("... done")
 
+    solver_tol = 1e-9
+
     print("\nComputing rough estimation of the trace ...")
     np.random.seed(123456)
     # pre-compute a rough estimate of the trace, to set then a tolerance
@@ -247,10 +245,7 @@ def mlmc(A, solver, params):
             x_size = int(x.shape[0]/2)
             x[x_size:] = -x[x_size:]
 
-        #z,num_iters = solver_sparse(A,x,solver_tol,solver,solver_name)
-        Abb = A.todense()
-        z = np.dot(np.linalg.inv(Abb),x)
-        z = np.asarray(z).reshape(-1)
+        z,num_iters = solver_sparse(A,x,solver_tol,ml_solvers[0],"mg")
 
         if use_Q:
             x_size = int(x.shape[0]/2)
@@ -283,7 +278,8 @@ def mlmc(A, solver, params):
     level_trace_tol  = abs(trace_tol*rough_trace/sqrt(nr_levels))
     level_solver_tol = level_trace_tol/N
 
-    level_solver_tol = 1e-15
+    #level_solver_tol = 1e-9/sqrt(nr_levels)
+    level_solver_tol = 1e-9
 
     print("")
 
@@ -318,16 +314,7 @@ def mlmc(A, solver, params):
 
             np_Af = Af.todense()
 
-            #z,num_iters = solver_sparse(Af,x,level_solver_tol,solver,"cg")
-            #z,num_iters = solver_sparse(Af,x,level_solver_tol,ml_solvers[i],"mg")
-            z = np.dot(np.linalg.inv(np_Af),x)
-            z = z.transpose()
-            #print(z.shape)
-            num_iters = 0
-            #exit(0)
-
-            #exact_sol = np.dot(np.linalg.inv(np_Af),x)
-            #print("** error in solves : "+str(np.linalg.norm(z-exact_sol)))
+            z,num_iters = solver_sparse(Af,x,level_solver_tol,ml_solvers[i],"mg")
 
             output_params['results'][i]['solver_iters'] += num_iters
 
@@ -349,22 +336,12 @@ def mlmc(A, solver, params):
             #else:
             #    y,num_iters = solver_sparse(Ac,xc,level_solver_tol,ml_solvers[i+1],"mg")
 
-            np_Ac = Ac.todense()
-
-            #y,num_iters = solver_sparse(Ac,xc,level_solver_tol,ml_solvers[i+1],"mg")
-            y = np.dot(np.linalg.inv(np_Ac),xc)
-            y = y.transpose()
-            num_iters = 0
+            y,num_iters = solver_sparse(Ac,xc,level_solver_tol,ml_solvers[i+1],"mg")
 
             output_params['results'][i+1]['solver_iters'] += num_iters
 
-            #print(num_iters)
-
-            xx1 = np.asarray(cummP*z).reshape(-1)
-            xx2 = np.asarray(cummP*P*y).reshape(-1)
-
-            e1 = np.vdot(x0,xx1)
-            e2 = np.vdot(x0,xx2)
+            e1 = np.vdot(x0,cummP*z)
+            e2 = np.vdot(x0,cummP*P*y)
 
             ests[j] = e1-e2
 
@@ -377,7 +354,7 @@ def mlmc(A, solver, params):
             #print(str(j)+" .. "+str(ests_avg)+" .. "+str(error_est)+" .. "+str(level_trace_tol))
 
             # break condition
-            if j>11 and error_est<level_trace_tol:
+            if j>5 and error_est<level_trace_tol:
                 break
 
         # cummulative R and P
@@ -415,14 +392,7 @@ def mlmc(A, solver, params):
             x2_size = int(x2.shape[0]/2)
             x2[x2_size:] = -x2[x2_size:]
 
-        np_Ac = Ac.todense()
-        #y,num_iters = solver_sparse(Ac,x2,level_solver_tol,solver,"cg")
-        #y,num_iters = solver_sparse(Ac,x2,level_solver_tol,ml_solvers[nr_levels-1],"mg")
-        y = np.dot(np.linalg.inv(np_Ac),x2)
-        y = y.transpose()
-        num_iters = 0
-
-        y = np.asarray(y).reshape(-1)
+        y,num_iters = solver_sparse(Ac,x2,level_solver_tol,ml_solvers[nr_levels-1],"mg")
 
         output_params['results'][nr_levels-1]['solver_iters'] += num_iters
 
@@ -437,7 +407,7 @@ def mlmc(A, solver, params):
         #print(str(i)+" .. "+str(ests_avg)+" .. "+str(error_est)+" .. "+str(level_trace_tol))
 
         # break condition
-        if i>11 and error_est<level_trace_tol:
+        if i>5 and error_est<level_trace_tol:
             break
 
     output_params['results'][nr_levels-1]['nr_ests'] += i
