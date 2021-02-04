@@ -2,18 +2,20 @@ load Af.mat;
 load Ac.mat;
 load P.mat;
 
-
 %spy(Af)
 %spy(Ac)
-spy(P)
+%spy(P)
 
-return;
+Qf = Af(:,:);
+[m,n] = size(Qf);
+half_size = int32(m/2);
+Qf(half_size+1:half_size*2,:) = -Qf(half_size+1:half_size*2,:);
 
-trace(inv(full(Af)))
+trQ = trace(inv(full(Qf)));
+trAf = trace(inv(full(Af)));
 
-%P
-
-%return;
+display(trQ);
+display(trAf);
 
 diffD = inv(full(Af)) - P*(inv(full(Ac)))*P';
 
