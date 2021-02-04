@@ -49,9 +49,6 @@ def write_png(A, filename):
 # compute tr(A^{-1}) via Hutchinson
 def hutchinson(A, solver, params):
 
-    # FIXME
-    max_nr_levels = 9
-
     # TODO : check input params !
 
     # solver params
@@ -66,14 +63,11 @@ def hutchinson(A, solver, params):
     trace_tol = params['tol']
     trace_max_nr_ests = params['max_nr_ests']
 
-    #np.random.randint(2, size=10)
+    use_Q = params['use_Q']
 
     # size of the problem
     N = A.shape[0]
 
-    #print("Computing rough estimation of the trace ...")
-
-    #print(solver_tol)
     solver_tol = 1e-9
 
     np.random.seed(123456)
@@ -91,52 +85,33 @@ def hutchinson(A, solver, params):
         x = np.where(x==3, -1j, x)
         x = np.where(x==5, 1j, x)
 
-        # FIXME : building for Q i.e. applying g3
-        x_size = int(x.shape[0]/2)
-        x[x_size:] = -x[x_size:]
+        if use_Q:
+            x_size = int(x.shape[0]/2)
+            x[x_size:] = -x[x_size:]
 
         #z,num_iters = solver_sparse(A,x,solver_tol,solver,solver_name)
         Abb = A.todense()
         z = np.dot(np.linalg.inv(Abb),x)
         z = np.asarray(z).reshape(-1)
-        #print(num_iters)
 
-        #print(num_iters)
-
-        # FIXME : reversing back the application of g3
-        x_size = int(x.shape[0]/2)
-        x[x_size:] = -x[x_size:]
+        if use_Q:
+            x_size = int(x.shape[0]/2)
+            x[x_size:] = -x[x_size:]
 
         e = np.vdot(x,z)
         ests[i] = e
 
     rough_trace = np.sum(ests[0:nr_rough_iters])/(nr_rough_iters)
 
-    # FIXME
-    #rough_trace = -10
-
-    #print("... done \n")
-
     print("** rough estimation of the trace : "+str(rough_trace))
-
-    rough_trace = rough_trace.real
-    print("** rough estimation of the trace : "+str(rough_trace))
-
-    #exit(0)
-
-    #rough_trace = 5.0
 
     # then, set a rough tolerance
     rough_trace_tol = abs(trace_tol*rough_trace)
     #rough_solver_tol = rough_trace_tol*lambda_min/N
     rough_solver_tol = abs(rough_trace_tol/N)
 
-    #print(rough_trace_tol/N)
-    #exit(0)
-
     #rough_solver_tol *= 0.50e+2
     rough_solver_tol = 1e-15
-    #print(rough_solver_tol)
 
     solver_iters = 0
     ests = np.zeros(trace_max_nr_ests, dtype=A.dtype)
@@ -150,9 +125,9 @@ def hutchinson(A, solver, params):
         x = np.where(x==3, -1j, x)
         x = np.where(x==5, 1j, x)
 
-        # FIXME : building for Q i.e. applying g3
-        x_size = int(x.shape[0]/2)
-        x[x_size:] = -x[x_size:]
+        if use_Q:
+            x_size = int(x.shape[0]/2)
+            x[x_size:] = -x[x_size:]
 
         #z,num_iters = solver_sparse(A,x,rough_solver_tol,solver,solver_name)
         Abb = A.todense()
@@ -162,14 +137,11 @@ def hutchinson(A, solver, params):
 
         solver_iters += num_iters
 
-        # FIXME : reversing back the application of g3
-        x_size = int(x.shape[0]/2)
-        x[x_size:] = -x[x_size:]
+        if use_Q:
+            x_size = int(x.shape[0]/2)
+            x[x_size:] = -x[x_size:]
 
         e = np.vdot(x,z)
-
-        #print(num_iters)
-        #print(e)
 
         ests[i] = e
 
@@ -179,7 +151,7 @@ def hutchinson(A, solver, params):
         ests_dev = sqrt(np.sum(np.square(np.abs(ests[0:(i+1)]-ests_avg)))/(i+1))
         error_est = ests_dev/sqrt(i+1)
 
-        print(str(i)+" .. "+str(ests_avg)+" .. "+str(rough_trace)+" .. "+str(error_est)+" .. "+str(rough_trace_tol)+" .. "+str(num_iters))
+        #print(str(i)+" .. "+str(ests_avg)+" .. "+str(rough_trace)+" .. "+str(error_est)+" .. "+str(rough_trace_tol)+" .. "+str(num_iters))
 
         # break condition
         if i>11 and error_est<rough_trace_tol:
@@ -200,9 +172,6 @@ def hutchinson(A, solver, params):
 # compute tr(A^{-1}) via MLMC
 def mlmc(A, solver, params):
 
-    # FIXME
-    max_nr_levels = 9
-
     # TODO : check input params !
 
     # solver params
@@ -215,10 +184,12 @@ def mlmc(A, solver, params):
     trace_max_nr_ests = params['max_nr_ests']
     trace_ml_constr = params['multilevel_construction']
 
+    use_Q = params['use_Q']
+
     # size of the problem
     N = A.shape[0]
 
-    #max_nr_levels = params['max_nr_levels']
+    # FIXME : hardcoding this for now, as aggregation.py needs to be fixed for more than 2 levels
     max_nr_levels = 2
 
     print("\nRunning MG setup from finest level ...")
@@ -228,18 +199,14 @@ def mlmc(A, solver, params):
         [ml, work] = adaptive_sa_solver(A, num_candidates=2, candidate_iters=2, improvement_iters=3,
                                         strength='symmetric', aggregate='standard', max_levels=max_nr_levels)
     elif trace_ml_constr=='manual_aggregation':
-
         # TODO : get <aggr_size> from input params
         aggr_size = 4
         aggrs = [aggr_size for i in range(max_nr_levels-1)]
-
         dof = [2]
         # TODO : get <dof_size> from input params
         dof_size = 4
         [dof.append(dof_size) for i in range(max_nr_levels-1)]
-
         ml = manual_aggregation(A, dof=dof, aggrs=aggrs, max_levels=max_nr_levels, dim=2)
-
     else:
         raise Exception("The specified <trace_multilevel_constructor> does not exist.")
     print("... done")
@@ -250,13 +217,8 @@ def mlmc(A, solver, params):
     # the actual number of levels
     nr_levels = len(ml.levels)
 
-    #exit(0)
-
-    #print("\nRunning MG setup for coarser levels ...")
     print("\nRunning MG setup for each level ...")
     ml_solvers = list()
-    #ml_solvers.append(ml)
-    #if nr_levels>2:
     for i in range(nr_levels):
         #mlx = pyamg.smoothed_aggregation_solver(ml.levels[i].A)
         #[mlx, work] = adaptive_sa_solver(ml.levels[i].A, num_candidates=5, improvement_iters=5)
@@ -267,71 +229,13 @@ def mlmc(A, solver, params):
         ml_solvers.append(mlx)
     print("... done")
 
-    print("")
-
-    for i in range(nr_levels):
-        for j in range(len(ml_solvers[i].levels)-1):
-            #write_png(csr_matrix(ml_solvers[i].levels[j].P,dtype=ml_solvers[i].levels[j].P.dtype),"P_"+str(i)+"_"+str(j)+".png")
-            Pxx1 = np.copy(np.asmatrix(np.asarray(csr_matrix(ml_solvers[i].levels[j].P,dtype=ml_solvers[i].levels[j].P.dtype))))
-            Pxx1 = Pxx1[0,0].todense()
-
-            mat_size1_half = int(Pxx1.shape[0]/2)
-
-            Pxx1[mat_size1_half:,:] = -Pxx1[mat_size1_half:,:]
-
-            Pxx2 = np.copy(np.asmatrix(np.asarray(csr_matrix(ml_solvers[i].levels[j].P,dtype=ml_solvers[i].levels[j].P.dtype))))
-            Pxx2 = Pxx2[0,0].todense()
-
-            mat_size2_half = int(Pxx2.shape[1]/2)
-            Pxx2[:,mat_size2_half:] = -Pxx2[:,mat_size2_half:]
-            diffP = Pxx1-Pxx2
-            print("measuring g3-compatibility at level "+str(i)+" : "+str( npnorm(diffP,ord='fro') ))
-
-    print("")
-
-    for j in range(nr_levels-1):
-        #write_png(csr_matrix(ml_solvers[i].levels[j].P,dtype=ml_solvers[i].levels[j].P.dtype),"P_"+str(i)+"_"+str(j)+".png")
-        Pxx1 = np.copy(np.asmatrix(np.asarray(csr_matrix(ml.levels[j].P,dtype=ml.levels[j].P.dtype))))
-        Pxx1 = Pxx1[0,0].todense()
-
-        mat_size1_half = int(Pxx1.shape[0]/2)
-
-        Pxx1[mat_size1_half:,:] = -Pxx1[mat_size1_half:,:]
-
-        Pxx2 = np.copy(np.asmatrix(np.asarray(csr_matrix(ml.levels[j].P,dtype=ml.levels[j].P.dtype))))
-        Pxx2 = Pxx2[0,0].todense()
-
-        mat_size2_half = int(Pxx2.shape[1]/2)
-        Pxx2[:,mat_size2_half:] = -Pxx2[:,mat_size2_half:]
-        diffP = Pxx1-Pxx2
-        print("measuring g3-compatibility at level "+str(j)+" : "+str( npnorm(diffP,ord='fro') ))
-
     print("\nComputing rough estimation of the trace ...")
-    # first of all, get a rough estimate of the trace via Hutchinson
-    trace_params = dict()
-    solver_params = dict()
-    solver_params['name'] = "mg"
-    solver_params['tol'] = solver_tol
-    trace_params['solver_params'] = solver_params
-    trace_params['tol'] = trace_tol
-    trace_params['max_nr_ests'] = 10
-    result = hutchinson(A, ml_solvers[0], trace_params)
-    trace = result['trace']
-    std_dev = result['std_dev']
-    nr_ests = result['nr_ests']
-    solver_iters = result['solver_iters']
-    print("... done \n")
-
-    rough_trace = trace
-
     np.random.seed(123456)
-
     # pre-compute a rough estimate of the trace, to set then a tolerance
     nr_rough_iters = 10
     ests = np.zeros(nr_rough_iters, dtype=A.dtype)
     # main Hutchinson loop
     for i in range(nr_rough_iters):
-
         # generate a Rademacher vector
         x = np.random.randint(4, size=N)
         x *= 2
@@ -339,36 +243,26 @@ def mlmc(A, solver, params):
         x = np.where(x==3, -1j, x)
         x = np.where(x==5, 1j, x)
 
-        # FIXME : building for Q i.e. applying g3
-        x_size = int(x.shape[0]/2)
-        x[x_size:] = -x[x_size:]
+        if use_Q:
+            x_size = int(x.shape[0]/2)
+            x[x_size:] = -x[x_size:]
 
         #z,num_iters = solver_sparse(A,x,solver_tol,solver,solver_name)
         Abb = A.todense()
         z = np.dot(np.linalg.inv(Abb),x)
         z = np.asarray(z).reshape(-1)
-        #print(num_iters)
 
-        #print(num_iters)
-
-        # FIXME : reversing back the application of g3
-        x_size = int(x.shape[0]/2)
-        x[x_size:] = -x[x_size:]
+        if use_Q:
+            x_size = int(x.shape[0]/2)
+            x[x_size:] = -x[x_size:]
 
         e = np.vdot(x,z)
         ests[i] = e
 
     rough_trace = np.sum(ests[0:nr_rough_iters])/(nr_rough_iters)
-
-    # FIXME
-    #rough_trace = -10
+    print("... done \n")
 
     print("** rough estimation of the trace : "+str(rough_trace))
-
-    #for i in range(nr_levels):
-    #    mat_diff = ml.levels[i].A-ml.levels[i].A.H
-    #    mat_diff = mat_diff.todense()
-    #    print(np.linalg.norm(mat_diff))
 
     output_params = dict()
     output_params['nr_levels'] = nr_levels
@@ -391,53 +285,7 @@ def mlmc(A, solver, params):
 
     level_solver_tol = 1e-15
 
-    #level_solver_tol *= 0.50e+2
-
     print("")
-
-    #print(level_solver_tol)
-
-    #print(trace_tol)
-    #print(level_trace_tol)
-
-    #print("")
-
-    #for i in range(nr_levels):
-    #    print(ml.levels[i].A.shape)
-
-    #print("")
-
-
-
-
-
-
-
-
-
-
-
-
-
-    #Af = ml.levels[0].A
-    #Pf = ml.levels[0].P
-    #Ac = ml.levels[1].A
-
-    #import scipy.io
-
-    #scipy.io.savemat('Af.mat', mdict={'Af': Af})
-    #scipy.io.savemat('Ac.mat', mdict={'Ac': Ac})
-    #scipy.io.savemat('P.mat', mdict={'P': Pf})
-
-    #exit(0)
-
-
-
-
-
-
-
-
 
     cummP = sp.sparse.identity(N)
     cummR = sp.sparse.identity(N)
@@ -449,33 +297,6 @@ def mlmc(A, solver, params):
         # P and R
         R = ml.levels[i].R
         P = ml.levels[i].P
-
-        # ------------
-        # ESTIMATING VARIANCE THEORETICALLY
-
-        Qf = Af.copy()
-        mat_size = int(Qf.shape[0]/2)
-        Qf[mat_size:,:] = -Qf[mat_size:,:]
-        Qc = Ac.copy()
-        mat_size = int(Qc.shape[0]/2)
-        Qc[mat_size:,:] = -Qc[mat_size:,:]
-
-        Afinv = np.linalg.inv(Qf.copy().toarray())
-
-        Acinv = np.linalg.inv(Qc.copy().toarray())
-
-        diff_mats = Afinv-P*Acinv*R
-        np.fill_diagonal(diff_mats,0)
-        fro_norm1 = npnorm(diff_mats,ord='fro')
-        fro_norm1 -= np.sum(np.square(np.diag(diff_mats)))
-        np.fill_diagonal(diff_mats,0)
-        fro_norm2 = npnorm(diff_mats,ord='fro')
-        print("\nFrobenius norm of off-diagonal part : "+str(fro_norm2)+"\n")
-        #print(fro_norm2)
-
-        # ------------
-
-        #exit(0)
 
         print("Computing for level "+str(i)+"...")
 
@@ -489,14 +310,11 @@ def mlmc(A, solver, params):
             x0 = np.where(x0==3, -1j, x0)
             x0 = np.where(x0==5, 1j, x0)
 
-            #print(x0.shape)
-            #print(type(x0))
-
             x = cummR*x0
 
-            # FIXME : building for Q i.e. applying g3
-            x_size = int(x.shape[0]/2)
-            x[x_size:] = -x[x_size:]
+            if use_Q:
+                x_size = int(x.shape[0]/2)
+                x[x_size:] = -x[x_size:]
 
             np_Af = Af.todense()
 
@@ -513,15 +331,15 @@ def mlmc(A, solver, params):
 
             output_params['results'][i]['solver_iters'] += num_iters
 
-            # FIXME : reversing back the application of g3
-            x_size = int(x.shape[0]/2)
-            x[x_size:] = -x[x_size:]
+            if use_Q:
+                x_size = int(x.shape[0]/2)
+                x[x_size:] = -x[x_size:]
 
             xc = R*x
 
-            # FIXME : building for Q i.e. applying g3
-            xc_size = int(xc.shape[0]/2)
-            xc[xc_size:] = -xc[xc_size:]
+            if use_Q:
+                xc_size = int(xc.shape[0]/2)
+                xc[xc_size:] = -xc[xc_size:]
 
             # for the last level, there is no MG
             #y,num_iters = solver_sparse(Ac,xc,level_solver_tol,solver,"cg")
@@ -548,9 +366,6 @@ def mlmc(A, solver, params):
             e1 = np.vdot(x0,xx1)
             e2 = np.vdot(x0,xx2)
 
-            #print(e1)
-            #print(e2)
-
             ests[j] = e1-e2
 
             # average of estimates
@@ -559,7 +374,7 @@ def mlmc(A, solver, params):
             ests_dev = sqrt(np.sum(np.square(np.abs(ests[0:(j+1)]-ests_avg)))/(j+1))
             error_est = ests_dev/sqrt(j+1)
 
-            print(str(j)+" .. "+str(ests_avg)+" .. "+str(error_est)+" .. "+str(level_trace_tol))
+            #print(str(j)+" .. "+str(ests_avg)+" .. "+str(error_est)+" .. "+str(level_trace_tol))
 
             # break condition
             if j>11 and error_est<level_trace_tol:
@@ -596,9 +411,9 @@ def mlmc(A, solver, params):
         x1 = cummP*xc
         x2 = cummR*x1
 
-        # FIXME : building for Q i.e. applying g3
-        x2_size = int(x2.shape[0]/2)
-        x2[x2_size:] = -x2[x2_size:]
+        if use_Q:
+            x2_size = int(x2.shape[0]/2)
+            x2[x2_size:] = -x2[x2_size:]
 
         np_Ac = Ac.todense()
         #y,num_iters = solver_sparse(Ac,x2,level_solver_tol,solver,"cg")
@@ -611,8 +426,6 @@ def mlmc(A, solver, params):
 
         output_params['results'][nr_levels-1]['solver_iters'] += num_iters
 
-        #print(num_iters)
-
         ests[i] = np.vdot(xc,y)
 
         # average of estimates
@@ -621,7 +434,7 @@ def mlmc(A, solver, params):
         ests_dev = sqrt(np.sum(np.square(np.abs(ests[0:(i+1)]-ests_avg)))/(i+1))
         error_est = ests_dev/sqrt(i+1)
 
-        print(str(i)+" .. "+str(ests_avg)+" .. "+str(error_est)+" .. "+str(level_trace_tol))
+        #print(str(i)+" .. "+str(ests_avg)+" .. "+str(error_est)+" .. "+str(level_trace_tol))
 
         # break condition
         if i>11 and error_est<level_trace_tol:
@@ -641,13 +454,10 @@ def mlmc(A, solver, params):
     for i in range(nr_levels):
         output_params['total_complexity'] += output_params['results'][i]['level_complexity']
 
-    #print(np.trace(np.linalg.inv(Ac.todense())))
-
     # total trace
     for i in range(nr_levels):
         output_params['trace'] += output_params['results'][i]['ests_avg']
 
     print("")
 
-    #return (ests_avg,ests_dev,i,solver_iters)
     return output_params

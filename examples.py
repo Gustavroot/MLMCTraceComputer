@@ -36,6 +36,7 @@ def EXAMPLE_001(params):
     # TODO : check more input params
 
     trace_tol = params['trace_tol']
+    trace_use_Q = params['trace_use_Q']
     solver_tol = params['solver_tol']
     #solver_use_mg = params['solver_use_mg']
 
@@ -47,6 +48,7 @@ def EXAMPLE_001(params):
     trace_params['solver_params'] = solver_params
     trace_params['tol'] = trace_tol
     trace_params['max_nr_ests'] = 1000000
+    trace_params['use_Q'] = trace_use_Q
     result = hutchinson(A, solver, trace_params)
     trace = result['trace']
     std_dev = result['std_dev']
@@ -94,16 +96,13 @@ def EXAMPLE_002(params):
     # extracting matrix
     A,B = loadMatrix(matrix_name, params['matrix_params'])
 
-    #from scipy.io import savemat
-    #savemat('grid_16x16', {'M':A})
-    #exit(0)
-
     # setting solver -- in this example, simply load CG (or whatever "plain/simple" solver is specified)
     solver = loadSolver(solver_name)
 
     # TODO : check more input params
 
     trace_tol = params['trace_tol']
+    trace_use_Q = params['trace_use_Q']
     solver_tol = params['solver_tol']
     solver_lambda_min = params['solver_lambda_min']
     max_nr_levels = params['max_nr_levels']
@@ -119,6 +118,7 @@ def EXAMPLE_002(params):
     trace_params['max_nr_ests'] = 1000000
     trace_params['max_nr_levels'] = max_nr_levels
     trace_params['multilevel_construction'] = trace_ml_constr
+    trace_params['use_Q'] = trace_use_Q
     result = mlmc(A, solver, trace_params)
 
     print(" -- matrix : "+matrix_name)

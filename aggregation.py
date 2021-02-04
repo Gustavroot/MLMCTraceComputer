@@ -64,9 +64,6 @@ def manual_aggregation(A, dof=[2,2,2], aggrs=[2,2], max_levels=3, dim=2):
     # assuming a (roughly) minimum coarsest-level size for the matrix
     min_coarsest_size = 8
 
-    # FIXME
-    max_levels=2
-
     if max_levels>2:
         raise Exception("FIXME : this code needs to be fixed for levels>2; the aggregation"+
                         " is being done wrong! Spin-wise separation is being done right from the"+
@@ -81,19 +78,6 @@ def manual_aggregation(A, dof=[2,2,2], aggrs=[2,2], max_levels=3, dim=2):
     Ps = list()
     Rs = list()
 
-    #Ax = Al.copy()
-    #Ax = Ax.getH()
-    #print("\n\thermiticity of A at level "+str(0)+" = "+str( norm(Ax-Al,ord='fro')) )
-
-    #mat_size_half = int(Al.shape[0]/2)
-    #g3Al = Al.copy()
-    #g3Al[mat_size_half:,:] = -g3Al[mat_size_half:,:]
-    #g3Ax = g3Al.copy()
-    #g3Ax = g3Ax.getH()
-    #print("\thermiticity of g3*A at level "+str(0)+" = "+str( norm(g3Ax-g3Al,ord='fro')) )
-
-    #As.append(A.copy())
-
     # at level 0
     ml = SimpleML()
     ml.levels.append(LevelML())
@@ -103,22 +87,9 @@ def manual_aggregation(A, dof=[2,2,2], aggrs=[2,2], max_levels=3, dim=2):
 
     for i in range(max_levels-1):
 
-        #mat_size = int(Al.shape[0]/2)
-        #Al[mat_size:,:] = -Al[mat_size:,:]
-
         print("\teigensolving at level "+str(i)+" ...")
         eigvals,eig_vecs = eigs(Al, k=dof[i+1], which='SM', return_eigenvectors=True, tol=1e-15)
-        #eig_vecs = np.ones((Al.shape[0],dof[i+1]))
-        #eig_vecs = np.random.rand(Al.shape[0],dof[i+1]) + np.random.rand(Al.shape[0],dof[i+1]) * 1j
         print("\t... done")
-
-        #mat_size = int(Al.shape[0]/2)
-        #Al[mat_size:,:] = -Al[mat_size:,:]
-
-        #for ctr in range(dof[i+1]):
-        #    print( npnorm(eig_vecs[:,ctr]) )
-        #print(eig_vecs.shape)
-        #exit(0)
 
         print("\tconstructing P at level "+str(i)+" ...")
 
@@ -155,21 +126,7 @@ def manual_aggregation(A, dof=[2,2,2], aggrs=[2,2], max_levels=3, dim=2):
 
         print("\t... done")
 
-        # check Gamma3-compability here !!
-        #P1 = np.copy(Px)
-        #mat_size1_half = int(P1.shape[0]/2)
-        #P1[mat_size1_half:,:] = -P1[mat_size1_half:,:]
-        #P2 = np.copy(Px)
-        #mat_size2_half = int(P1.shape[1]/2)
-        #P2[:,mat_size2_half:] = -P2[:,mat_size2_half:]
-        #diffP = P1-P2
-        #print("\tmeasuring g3-compatibility at level "+str(i)+" : "+str( npnorm(diffP,ord='fro') ))
-
-        Pl1 = csr_matrix(Px, dtype=Px.dtype)
-        write_png(Pl1,"P1_"+str(i)+".png")
-
         # ------------------------------------------------------------------------------------
-        #"""
         # perform a per-aggregate orthonormalization - apply plain CGS
         print("\torthonormalizing by aggregate in P at level "+str(i)+" ...")
         # spin 0
@@ -202,7 +159,6 @@ def manual_aggregation(A, dof=[2,2,2], aggrs=[2,2], max_levels=3, dim=2):
                     Px[ii_off_1:ii_off_2,jj_off+k] -= rs[w]*Px[ii_off_1:ii_off_2,jj_off+w]
                 Px[ii_off_1:ii_off_2,jj_off+k] /= sqrt(np.vdot(Px[ii_off_1:ii_off_2,jj_off+k],Px[ii_off_1:ii_off_2,jj_off+k]))
         print("\t... done")
-        #"""
         # ------------------------------------------------------------------------------------
 
         #Pl2 = csr_matrix(Px, dtype=Px.dtype)
@@ -222,27 +178,20 @@ def manual_aggregation(A, dof=[2,2,2], aggrs=[2,2], max_levels=3, dim=2):
 
         ml.levels[i].P = Pl.copy()
 
-        #print("\tP"+str(i)+".shape = "+str(Pl.shape))
-
         print("\tconstructing R at level "+str(i)+" ...")
 
         # set Rl = Pl^H
         Rl = Pl.copy()
         Rl = Rl.conjugate()
         Rl = Rl.transpose()
-        #Rl = Rl.getH()
 
         ml.levels[i].R = Rl.copy()
-
-        #print("\tR"+str(i)+".shape = "+str(Rl.shape))
 
         print("\t... done")
 
         axx = Rl*Pl
         bxx = identity(Pl.shape[1],dtype=Pl.dtype)
         cxx = axx-bxx
-        #print(axx.shape)
-        #print(bxx.shape)
         print("\torthonormality of P at level "+str(i)+" = "+str( norm(axx-bxx,ord='fro')) )
 
         print("\tconstructing A at level "+str(i+1)+" ...")
@@ -263,15 +212,10 @@ def manual_aggregation(A, dof=[2,2,2], aggrs=[2,2], max_levels=3, dim=2):
         g3Ax = g3Ax.getH()
         print("\thermiticity of g3*A at level "+str(i+1)+" = "+str( norm(g3Ax-g3Al,ord='fro')) )
 
-        #print("\tA"+str(i+1)+".shape = "+str(Al.shape))
-
         print("\t... done")
 
         print("")
 
         if Al.shape[0] <= min_coarsest_size: break
-
-    #[ml, work] = adaptive_sa_solver(A, num_candidates=2, candidate_iters=2, improvement_iters=3,
-    #                                strength='symmetric', aggregate='standard', max_levels=max_levels)
 
     return ml
