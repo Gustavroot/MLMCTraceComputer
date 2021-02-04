@@ -33,19 +33,19 @@ if __name__=='__main__':
     #params['matrix'] = 'diffusion2D'
 
     # for Schwinger
-    matrix_params['N'] = 128
-    params['matrix'] = 'mat_schwinger128x128b3phasenum11000.mat'
-    #matrix_params['N'] = 16
-    #params['matrix'] = 'mat_schwinger16x16b3phasenum11000.mat'
+    #matrix_params['N'] = 128
+    #params['matrix'] = 'mat_schwinger128x128b3phasenum11000.mat'
+    matrix_params['N'] = 16
+    params['matrix'] = 'mat_schwinger16x16b3phasenum11000.mat'
 
     params['matrix_params'] = matrix_params
     params['solver'] = 'mg'
-    params['trace_tol'] = 3e-1
+    params['trace_tol'] = 1.0e-1
     #params['multilevel_construction'] = 'manual_aggregation'
     params['solver_tol'] = 1e-3
     #params['solver_use_mg'] = True
     params['max_nr_levels'] = 15
-    #EXAMPLE_001(params)
+    EXAMPLE_001(params)
 
     #exit(0)
 
@@ -72,14 +72,14 @@ if __name__=='__main__':
     #params['matrix'] = 'diffusion2D'
 
     # for Schwinger
-    matrix_params['N'] = 128
-    params['matrix'] = 'mat_schwinger128x128b3phasenum11000.mat'
-    #matrix_params['N'] = 16
-    #params['matrix'] = 'mat_schwinger16x16b3phasenum11000.mat'
+    #matrix_params['N'] = 128
+    #params['matrix'] = 'mat_schwinger128x128b3phasenum11000.mat'
+    matrix_params['N'] = 16
+    params['matrix'] = 'mat_schwinger16x16b3phasenum11000.mat'
 
     params['matrix_params'] = matrix_params
     params['solver'] = 'cg'
-    params['trace_tol'] = 3e-1
+    params['trace_tol'] = 1.0e-1
     params['trace_multilevel_construction'] = 'manual_aggregation'
     params['solver_tol'] = 1e-3
     params['solver_lambda_min'] = 1e-2

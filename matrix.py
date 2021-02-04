@@ -45,7 +45,7 @@ def loadMatrix(matrix_name, params):
 
     elif len(matrix_name.split('_'))==2:
 
-        m = 1.5
+        m = -0.98
 
         # get filename and load
         filename = matrix_name.split('_')
@@ -58,6 +58,10 @@ def loadMatrix(matrix_name, params):
         #print(mat_contents['S'].shape)
         A = mat_contents['S']
         A += m*identity(A.shape[0], dtype=A.dtype)
+
+        #A = A.getH()
+        mat_size = int(A.shape[0]/2)
+        A[mat_size:,:] = -A[mat_size:,:]
 
         #print(matrix_name)
         #exit(0)

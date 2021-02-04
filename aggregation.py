@@ -103,11 +103,17 @@ def manual_aggregation(A, dof=[2,2,2], aggrs=[2,2], max_levels=3, dim=2):
 
     for i in range(max_levels-1):
 
+        #mat_size = int(Al.shape[0]/2)
+        #Al[mat_size:,:] = -Al[mat_size:,:]
+
         print("\teigensolving at level "+str(i)+" ...")
-        eigvals,eig_vecs = eigs(Al, k=dof[i+1], which='SM', return_eigenvectors=True, tol=1e-9)
+        eigvals,eig_vecs = eigs(Al, k=dof[i+1], which='SM', return_eigenvectors=True, tol=1e-15)
         #eig_vecs = np.ones((Al.shape[0],dof[i+1]))
         #eig_vecs = np.random.rand(Al.shape[0],dof[i+1]) + np.random.rand(Al.shape[0],dof[i+1]) * 1j
         print("\t... done")
+
+        #mat_size = int(Al.shape[0]/2)
+        #Al[mat_size:,:] = -Al[mat_size:,:]
 
         #for ctr in range(dof[i+1]):
         #    print( npnorm(eig_vecs[:,ctr]) )
@@ -132,7 +138,8 @@ def manual_aggregation(A, dof=[2,2,2], aggrs=[2,2], max_levels=3, dim=2):
                 for w in range(aggr_size_half):
                     # even entries
                     aggr_eigvectr_ptr = j*aggr_size+2*w
-                    ii_ptr = j*aggr_size+w
+                    #ii_ptr = j*aggr_size+w
+                    ii_ptr = j*aggr_size+2*w
                     jj_ptr = j*dof[i+1]*2+k
                     Px[ii_ptr,jj_ptr] = eig_vecs[aggr_eigvectr_ptr,k]
             # this is a for loop over eigenvectors
@@ -141,7 +148,8 @@ def manual_aggregation(A, dof=[2,2,2], aggrs=[2,2], max_levels=3, dim=2):
                 for w in range(aggr_size_half):
                     # odd entries
                     aggr_eigvectr_ptr = j*aggr_size+2*w+1
-                    ii_ptr = j*aggr_size+aggr_size_half+w
+                    #ii_ptr = j*aggr_size+aggr_size_half+w
+                    ii_ptr = j*aggr_size+2*w+1
                     jj_ptr = j*dof[i+1]*2+dof[i+1]+k
                     Px[ii_ptr,jj_ptr] = eig_vecs[aggr_eigvectr_ptr,k]
 
@@ -157,8 +165,8 @@ def manual_aggregation(A, dof=[2,2,2], aggrs=[2,2], max_levels=3, dim=2):
         #diffP = P1-P2
         #print("\tmeasuring g3-compatibility at level "+str(i)+" : "+str( npnorm(diffP,ord='fro') ))
 
-        #Pl1 = csr_matrix(Px, dtype=Px.dtype)
-        #write_png(Pl1,"P1_"+str(i)+".png")
+        Pl1 = csr_matrix(Px, dtype=Px.dtype)
+        write_png(Pl1,"P1_"+str(i)+".png")
 
         # ------------------------------------------------------------------------------------
         #"""
@@ -168,7 +176,8 @@ def manual_aggregation(A, dof=[2,2,2], aggrs=[2,2], max_levels=3, dim=2):
         for j in range(nr_aggrs):
             for k in range(dof[i+1]):
                 ii_off_1 = j*aggr_size
-                ii_off_2 = ii_off_1+aggr_size_half
+                #ii_off_2 = ii_off_1+aggr_size_half
+                ii_off_2 = ii_off_1+aggr_size
                 jj_off = j*dof[i+1]*2
                 # vk = Px[ii_off_1:ii_off_2,jj_off+k]
                 rs = []
@@ -180,8 +189,10 @@ def manual_aggregation(A, dof=[2,2,2], aggrs=[2,2], max_levels=3, dim=2):
         # spin 1
         for j in range(nr_aggrs):
             for k in range(dof[i+1]):
-                ii_off_1 = j*aggr_size+aggr_size_half
-                ii_off_2 = ii_off_1+aggr_size_half
+                #ii_off_1 = j*aggr_size+aggr_size_half
+                #ii_off_2 = ii_off_1+aggr_size_half
+                ii_off_1 = j*aggr_size
+                ii_off_2 = ii_off_1+aggr_size
                 jj_off = j*dof[i+1]*2+dof[i+1]
                 # vk = Px[ii_off_1:ii_off_2,jj_off+k]
                 rs = []
@@ -227,12 +238,12 @@ def manual_aggregation(A, dof=[2,2,2], aggrs=[2,2], max_levels=3, dim=2):
 
         print("\t... done")
 
-        #axx = Rl*Pl
-        #bxx = identity(Pl.shape[1],dtype=Pl.dtype)
-        #cxx = axx-bxx
-        ##print(axx.shape)
-        ##print(bxx.shape)
-        #print("\torthonormality of P at level "+str(i)+" = "+str( norm(axx-bxx,ord='fro')) )
+        axx = Rl*Pl
+        bxx = identity(Pl.shape[1],dtype=Pl.dtype)
+        cxx = axx-bxx
+        #print(axx.shape)
+        #print(bxx.shape)
+        print("\torthonormality of P at level "+str(i)+" = "+str( norm(axx-bxx,ord='fro')) )
 
         print("\tconstructing A at level "+str(i+1)+" ...")
 
@@ -242,15 +253,15 @@ def manual_aggregation(A, dof=[2,2,2], aggrs=[2,2], max_levels=3, dim=2):
         ml.levels.append(LevelML())
         ml.levels[i+1].A = Al.copy()
 
-        #Ax = Ax.getH()
-        #print("\thermiticity of A at level "+str(i+1)+" = "+str( norm(Ax-Al,ord='fro')) )
+        Ax = Ax.getH()
+        print("\thermiticity of A at level "+str(i+1)+" = "+str( norm(Ax-Al,ord='fro')) )
 
-        #mat_size_half = int(Al.shape[0]/2)
-        #g3Al = Al.copy()
-        #g3Al[mat_size_half:,:] = -g3Al[mat_size_half:,:]
-        #g3Ax = g3Al.copy()
-        #g3Ax = g3Ax.getH()
-        #print("\thermiticity of g3*A at level "+str(i+1)+" = "+str( norm(g3Ax-g3Al,ord='fro')) )
+        mat_size_half = int(Al.shape[0]/2)
+        g3Al = Al.copy()
+        g3Al[mat_size_half:,:] = -g3Al[mat_size_half:,:]
+        g3Ax = g3Al.copy()
+        g3Ax = g3Ax.getH()
+        print("\thermiticity of g3*A at level "+str(i+1)+" = "+str( norm(g3Ax-g3Al,ord='fro')) )
 
         #print("\tA"+str(i+1)+".shape = "+str(Al.shape))
 
