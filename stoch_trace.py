@@ -49,10 +49,9 @@ def write_png(A, filename):
 # compute tr(A^{-1}) via Hutchinson
 def hutchinson(A, solver, params):
 
-    # FIXME
-    max_nr_levels = 9
-
     # TODO : check input params !
+
+    max_nr_levels = params['max_nr_levels']
 
     # solver params
     solver_name = params['solver_params']['name']
@@ -185,8 +184,7 @@ def mlmc(A, solver, params):
     # size of the problem
     N = A.shape[0]
 
-    # FIXME : hardcoding this as aggregation.py needs to be fixed
-    max_nr_levels = 2
+    max_nr_levels = params['max_nr_levels']
 
     print("\nRunning MG setup from finest level ...")
     if trace_ml_constr=='pyamg':
@@ -195,13 +193,22 @@ def mlmc(A, solver, params):
         [ml, work] = adaptive_sa_solver(A, num_candidates=2, candidate_iters=2, improvement_iters=3,
                                         strength='symmetric', aggregate='standard', max_levels=max_nr_levels)
     elif trace_ml_constr=='manual_aggregation':
+
         # TODO : get <aggr_size> from input params
-        aggr_size = 4
-        aggrs = [aggr_size for i in range(max_nr_levels-1)]
-        dof = [2]
+        #aggr_size = 4
+        #aggrs = [aggr_size for i in range(max_nr_levels-1)]
+
+        aggrs = [4,4]
+        #aggrs = [4,4]
+
+        #dof = [2]
         # TODO : get <dof_size> from input params
-        dof_size = 8
-        [dof.append(dof_size) for i in range(max_nr_levels-1)]
+        #dof_size = 8
+        #[dof.append(dof_size) for i in range(max_nr_levels-1)]
+
+        dof = [2,4,32]
+        #dof = [2,2,2]
+
         ml = manual_aggregation(A, dof=dof, aggrs=aggrs, max_levels=max_nr_levels, dim=2)
     else:
         raise Exception("The specified <trace_multilevel_constructor> does not exist.")
@@ -215,7 +222,7 @@ def mlmc(A, solver, params):
 
     print("\nRunning MG setup for each level ...")
     ml_solvers = list()
-    for i in range(nr_levels):
+    for i in range(nr_levels-1):
         #mlx = pyamg.smoothed_aggregation_solver(ml.levels[i].A)
         #[mlx, work] = adaptive_sa_solver(ml.levels[i].A, num_candidates=5, improvement_iters=5)
         #[mlx, work] = adaptive_sa_solver(ml.levels[i].A, num_candidates=2, candidate_iters=2, improvement_iters=3,
@@ -312,8 +319,6 @@ def mlmc(A, solver, params):
                 x_size = int(x.shape[0]/2)
                 x[x_size:] = -x[x_size:]
 
-            np_Af = Af.todense()
-
             z,num_iters = solver_sparse(Af,x,level_solver_tol,ml_solvers[i],"mg")
 
             output_params['results'][i]['solver_iters'] += num_iters
@@ -331,12 +336,16 @@ def mlmc(A, solver, params):
             # for the last level, there is no MG
             #y,num_iters = solver_sparse(Ac,xc,level_solver_tol,solver,"cg")
 
-            #if (i+1)==(nr_levels-1):
-            #    y,num_iters = solver_sparse(Ac,xc,level_solver_tol,solver,"cg")
-            #else:
-            #    y,num_iters = solver_sparse(Ac,xc,level_solver_tol,ml_solvers[i+1],"mg")
-
-            y,num_iters = solver_sparse(Ac,xc,level_solver_tol,ml_solvers[i+1],"mg")
+            if (i+1)==(nr_levels-1):
+                #y,num_iters = solver_sparse(Ac,xc,level_solver_tol,solver,"cg")
+                # solve directly
+                np_Ac = Ac.todense()
+                y = np.dot(np.linalg.inv(np_Ac),xc)
+                y = np.asarray(y).reshape(-1)
+                num_iters = 1
+            else:
+                y,num_iters = solver_sparse(Ac,xc,level_solver_tol,ml_solvers[i+1],"mg")
+            #y,num_iters = solver_sparse(Ac,xc,level_solver_tol,ml_solvers[i+1],"mg")
 
             output_params['results'][i+1]['solver_iters'] += num_iters
 
@@ -376,6 +385,10 @@ def mlmc(A, solver, params):
     Ac = ml.levels[nr_levels-1].A
     Nc = Ac.shape[0]
     ests = np.zeros(trace_max_nr_ests, dtype=Ac.dtype)
+
+    np_Ac = Ac.todense()
+    np_Ac_inv = np.linalg.inv(np_Ac)
+
     for i in range(trace_max_nr_ests):
 
         # generate a Rademacher vector
@@ -392,7 +405,10 @@ def mlmc(A, solver, params):
             x2_size = int(x2.shape[0]/2)
             x2[x2_size:] = -x2[x2_size:]
 
-        y,num_iters = solver_sparse(Ac,x2,level_solver_tol,ml_solvers[nr_levels-1],"mg")
+        #y,num_iters = solver_sparse(Ac,x2,level_solver_tol,ml_solvers[nr_levels-1],"mg")
+        y = np.dot(np_Ac_inv,x2)
+        y = np.asarray(y).reshape(-1)
+        num_iters = 1
 
         output_params['results'][nr_levels-1]['solver_iters'] += num_iters
 
@@ -416,10 +432,12 @@ def mlmc(A, solver, params):
     output_params['results'][nr_levels-1]['ests_avg'] = ests_avg
     output_params['results'][nr_levels-1]['ests_dev'] = ests_dev
 
-    for i in range(nr_levels):
+    for i in range(nr_levels-1):
         #output_params['results'][i]['level_complexity'] += output_params['results'][i]['solver_iters']*ml_solvers[i].cycle_complexity()
         slvr = ml_solvers[i]
-        output_params['results'][i]['level_complexity'] += output_params['results'][i]['solver_iters']*flopsV(len(slvr.levels), slvr.levels, 0)
+        output_params['results'][i]['level_complexity'] = output_params['results'][i]['solver_iters']*flopsV(len(slvr.levels), slvr.levels, 0)
+
+    output_params['results'][nr_levels-1]['level_complexity'] = output_params['results'][i]['solver_iters']*(ml.levels[nr_levels-1].A.shape[0]*ml.levels[nr_levels-1].A.shape[0])
 
     for i in range(nr_levels):
         output_params['total_complexity'] += output_params['results'][i]['level_complexity']

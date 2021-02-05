@@ -41,6 +41,7 @@ def EXAMPLE_001(params):
     trace_use_Q = params['trace_use_Q']
     solver_tol = params['solver_tol']
     #solver_use_mg = params['solver_use_mg']
+    max_nr_levels = params['max_nr_levels']
 
     trace_params = dict()
     solver_params = dict()
@@ -51,6 +52,7 @@ def EXAMPLE_001(params):
     trace_params['tol'] = trace_tol
     trace_params['max_nr_ests'] = 1000000
     trace_params['use_Q'] = trace_use_Q
+    trace_params['max_nr_levels'] = max_nr_levels
     result = hutchinson(A, solver, trace_params)
     trace = result['trace']
     std_dev = result['std_dev']
@@ -138,8 +140,8 @@ def EXAMPLE_002(params):
         print(" \t-- solver iters = "+str(result['results'][i]['solver_iters']))
         print(" \t-- trace = "+str(result['results'][i]['ests_avg']))
         print(" \t-- std dev = "+str(result['results'][i]['ests_dev']))
-        if i<(result['nr_levels']-1):
-            cmplxity = result['results'][i]['level_complexity']/(1.0e+6)
-            print(" -- level MG complexity = "+str(cmplxity)+" MFLOPS")
+        #if i<(result['nr_levels']-1):
+        cmplxity = result['results'][i]['level_complexity']/(1.0e+6)
+        print("\t-- level MG complexity = "+str(cmplxity)+" MFLOPS")
 
     print("\n")

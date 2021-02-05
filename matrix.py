@@ -45,8 +45,8 @@ def loadMatrix(matrix_name, params):
 
     elif len(matrix_name.split('_'))==2:
 
-        m = -0.85
-        #m = 0.2
+        m = -0.8854 # this value is for a 16^2 lattice
+        #m = -0.03 # this value is for a 128^2 lattice
 
         # get filename and load
         filename = matrix_name.split('_')
@@ -56,13 +56,13 @@ def loadMatrix(matrix_name, params):
         import scipy.io as sio
         mat_contents = sio.loadmat(matrix_name)
 
-        #print(mat_contents['S'].shape)
         A = mat_contents['S']
         A += m*identity(A.shape[0], dtype=A.dtype)
 
-        #A = A.getH()
-        mat_size = int(A.shape[0]/2)
-        A[mat_size:,:] = -A[mat_size:,:]
+        # FIXME : this application of g3 is not needed in general !!
+        if matrix_name=='mat_schwinger16x16b3phasenum11000.mat':
+            mat_size = int(A.shape[0]/2)
+            A[mat_size:,:] = -A[mat_size:,:]
 
         #print(matrix_name)
         #exit(0)

@@ -51,7 +51,8 @@ def loadSolver(solver_name, A=None, B=None):
         #ml = pyamg.smoothed_aggregation_solver(A,B)
         #[ml, work] = adaptive_sa_solver(A, num_candidates=5, improvement_iters=5)
         [ml, work] = pyamg.aggregation.adaptive.adaptive_sa_solver(A, num_candidates=2, candidate_iters=2, improvement_iters=3,
-                                                                   strength='symmetric', aggregate='standard', max_levels=max_nr_levels)
+                                                                   strength='symmetric', aggregate='standard', max_levels=9)
+        #ml = pyamg.smoothed_aggregation_solver(A)
         return ml
 
     else:

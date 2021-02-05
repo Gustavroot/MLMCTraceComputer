@@ -64,11 +64,6 @@ def manual_aggregation(A, dof=[2,2,2], aggrs=[2,2], max_levels=3, dim=2):
     # assuming a (roughly) minimum coarsest-level size for the matrix
     min_coarsest_size = 8
 
-    if max_levels>2:
-        raise Exception("FIXME : this code needs to be fixed for levels>2; the aggregation"+
-                        " is being done wrong! Spin-wise separation is being done right from the"+
-                        " first to the second level, but not correct afterwards")
-
     # TODO : check what is the actual maximum number of levels possible. For
     #        now, just assume max_levels is possible
 
@@ -87,15 +82,15 @@ def manual_aggregation(A, dof=[2,2,2], aggrs=[2,2], max_levels=3, dim=2):
 
     for i in range(max_levels-1):
 
-        #mat_size = int(Al.shape[0]/2)
-        #Al[mat_size:] = -Al[mat_size:]
+        mat_size = int(Al.shape[0]/2)
+        Al[mat_size:] = -Al[mat_size:]
 
         print("\teigensolving at level "+str(i)+" ...")
         eigvals,eig_vecs = eigs(Al, k=dof[i+1], which='SM', return_eigenvectors=True, tol=1e-9)
         print("\t... done")
 
-        #mat_size = int(Al.shape[0]/2)
-        #Al[mat_size:] = -Al[mat_size:]
+        mat_size = int(Al.shape[0]/2)
+        Al[mat_size:] = -Al[mat_size:]
 
         print("\tconstructing P at level "+str(i)+" ...")
 
@@ -111,24 +106,41 @@ def manual_aggregation(A, dof=[2,2,2], aggrs=[2,2], max_levels=3, dim=2):
         for j in range(nr_aggrs):
             # this is a for loop over eigenvectors
             for k in range(dof[i+1]):
+
                 # this is a for loop over half of the entries, spin 0
-                for w in range(aggr_size_half):
-                    # even entries
-                    aggr_eigvectr_ptr = j*aggr_size+2*w
-                    #ii_ptr = j*aggr_size+w
-                    ii_ptr = j*aggr_size+2*w
-                    jj_ptr = j*dof[i+1]*2+k
-                    Px[ii_ptr,jj_ptr] = eig_vecs[aggr_eigvectr_ptr,k]
+                for w in range(int(aggr_size_half/(dof[i]/2))):
+
+                    for z in range(int(dof[i]/2)):
+
+                        # even entries
+                        aggr_eigvectr_ptr = j*aggr_size+w*dof[i]+z
+                        #ii_ptr = j*aggr_size+w
+                        #ii_ptr = j*aggr_size+2*w
+                        ii_ptr = j*aggr_size+w*dof[i]+z
+                        jj_ptr = j*dof[i+1]*2+k
+                        Px[ii_ptr,jj_ptr] = eig_vecs[aggr_eigvectr_ptr,k]
+
+
+
             # this is a for loop over eigenvectors
             for k in range(dof[i+1]):
+
                 # this is a for loop over half of the entries, spin 1
-                for w in range(aggr_size_half):
-                    # odd entries
-                    aggr_eigvectr_ptr = j*aggr_size+2*w+1
-                    #ii_ptr = j*aggr_size+aggr_size_half+w
-                    ii_ptr = j*aggr_size+2*w+1
-                    jj_ptr = j*dof[i+1]*2+dof[i+1]+k
-                    Px[ii_ptr,jj_ptr] = eig_vecs[aggr_eigvectr_ptr,k]
+                for w in range(int(aggr_size_half/(dof[i]/2))):
+
+                    for z in range(int(dof[i]/2)):
+
+
+                        # odd entries
+                        aggr_eigvectr_ptr = j*aggr_size+w*dof[i]+int(dof[i]/2)+z
+                        #ii_ptr = j*aggr_size+aggr_size_half+w
+                        ii_ptr = j*aggr_size+w*dof[i]+int(dof[i]/2)+z
+                        jj_ptr = j*dof[i+1]*2+dof[i+1]+k
+                        Px[ii_ptr,jj_ptr] = eig_vecs[aggr_eigvectr_ptr,k]
+
+
+
+
 
         print("\t... done")
 

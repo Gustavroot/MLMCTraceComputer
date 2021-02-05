@@ -40,13 +40,13 @@ if __name__=='__main__':
     params['matrix'] = 'mat_schwinger16x16b3phasenum11000.mat'
 
     params['matrix_params'] = matrix_params
-    params['solver'] = 'cg'
+    params['solver'] = 'gmres'
     params['trace_tol'] = 1.0e-2
     params['trace_use_Q'] = True
     params['trace_multilevel_construction'] = 'manual_aggregation'
     params['solver_tol'] = 1e-3
     params['solver_lambda_min'] = 1e-2
-    params['max_nr_levels'] = 15
+    params['max_nr_levels'] = 3
     EXAMPLE_002(params)
 
     # --------------------------------
@@ -87,6 +87,6 @@ if __name__=='__main__':
     params['trace_tol'] = 1.0e-2
     params['trace_use_Q'] = True
     params['solver_tol'] = 1e-3
-    params['max_nr_levels'] = 15
+    params['max_nr_levels'] = 3
 
     EXAMPLE_001(params)

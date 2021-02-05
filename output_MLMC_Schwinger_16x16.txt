@@ -1,0 +1,97 @@
+
+-------------------------------------------
+Example 02 : computing tr(A^{-1}) with MLMC
+-------------------------------------------
+
+
+Running MG setup from finest level ...
+
+	eigensolving at level 0 ...
+	... done
+	constructing P at level 0 ...
+	... done
+	orthonormalizing by aggregate in P at level 0 ...
+	... done
+	measuring g3-compatibility at level 0 : 0.0
+	constructing R at level 0 ...
+	... done
+	orthonormality of P at level 0 = 7.406306175161969e-15
+	constructing A at level 1 ...
+	hermiticity of A at level 1 = 22.263241742759206
+	hermiticity of g3*A at level 1 = 5.604973814452768e-15
+	... done
+
+	eigensolving at level 1 ...
+	... done
+	constructing P at level 1 ...
+	... done
+	orthonormalizing by aggregate in P at level 1 ...
+	... done
+	measuring g3-compatibility at level 1 : 0.0
+	constructing R at level 1 ...
+	... done
+	orthonormality of P at level 1 = 9.828226904584652e-12
+	constructing A at level 2 ...
+	hermiticity of A at level 2 = 22.26324174275922
+	hermiticity of g3*A at level 2 = 1.2385615494713403e-14
+	... done
+
+... done
+
+Multilevel information:
+For manual aggregation, printing <ml> is under construction
+
+Running MG setup for each level ...
+... done
+
+Computing rough estimation of the trace ...
+... done 
+
+** rough estimation of the trace : (215.54273011961698-6.574357014343946e-08j)
+
+Computing for level 0...
+... done
+Computing for level 1...
+... done
+
+ -- matrix : mat_schwinger16x16b3phasenum11000.mat
+ -- matrix size : 512x512
+ -- tr(A^{-1}) = (202.6433373139564+2.969921404621233e-08j)
+ -- total MG complexity = 22.877752 MFLOPS
+ -- std dev = ---
+ -- level : 0
+ 	-- number of estimates = 39
+ 	-- solver iters = 794
+ 	-- trace = (47.910914154167685+2.7366452948207612e-08j)
+ 	-- std dev = 7.85482307828165
+	-- level MG complexity = 9.867832 MFLOPS
+ -- level : 1
+ 	-- number of estimates = 6
+ 	-- solver iters = 528
+ 	-- trace = (-9.724867514445836e-09+2.3329074545180055e-09j)
+ 	-- std dev = 6.508335186589357e-08
+	-- level MG complexity = 4.359168 MFLOPS
+ -- level : 2
+ 	-- number of estimates = 1852
+ 	-- solver iters = 1860
+ 	-- trace = (154.7324231695136-1.463565132850974e-13j)
+ 	-- std dev = 53.55364247582689
+	-- level MG complexity = 8.650752 MFLOPS
+
+
+
+-------------------------------------------------
+Example 01 : computing tr(A^{-1}) with Hutchinson
+-------------------------------------------------
+
+** rough estimation of the trace : (215.54273011961698-6.574357014343946e-08j)
+
+ -- matrix : mat_schwinger16x16b3phasenum11000.mat
+ -- matrix size : 512x512
+ -- tr(A^{-1}) = (197.19388034323651+4.4621618410573147e-08j)
+ -- total MG complexity = 407.775108 MFLOPS
+ -- std dev = 87.67384710915798
+ -- number of estimates = 1654
+ -- solver iters = 32811
+
+
