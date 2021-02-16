@@ -352,7 +352,9 @@ void coarse_gamma5_PRECISION( vector_PRECISION eta, vector_PRECISION phi, int st
   
   int j, k=l->num_lattice_site_var/2;
   vector_PRECISION eta_end;
-  
+
+  //printf("%d\n", k);
+
   eta_end = eta+end;
   phi += start;
   eta += start;

@@ -384,7 +384,13 @@
     struct dd_alpha_amg_parameters amg_params;
     struct dd_alpha_amg_setup_status mg_setup_status;
     double mass_for_next_solve;
-    
+
+    int on_solve;
+    char which_var[100];
+    int which_lev;
+    int ind_beg;
+    int ind_end;
+
   } global_struct;
 
   extern global_struct g;

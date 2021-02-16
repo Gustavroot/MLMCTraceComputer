@@ -53,6 +53,7 @@ def EXAMPLE_001(params):
     trace_params['max_nr_ests'] = 1000000
     trace_params['use_Q'] = trace_use_Q
     trace_params['max_nr_levels'] = max_nr_levels
+    trace_params['problem_name'] = params['matrix_params']['problem_name']
     result = hutchinson(A, solver, trace_params)
     trace = result['trace']
     std_dev = result['std_dev']
@@ -125,6 +126,7 @@ def EXAMPLE_002(params):
     trace_params['max_nr_levels'] = max_nr_levels
     trace_params['multilevel_construction'] = trace_ml_constr
     trace_params['use_Q'] = trace_use_Q
+    trace_params['problem_name'] = params['matrix_params']['problem_name']
     result = mlmc(A, solver, trace_params)
 
     print(" -- matrix : "+matrix_name)

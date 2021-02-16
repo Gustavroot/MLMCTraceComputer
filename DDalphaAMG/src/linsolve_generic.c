@@ -248,7 +248,93 @@ int fgmres_PRECISION( gmres_PRECISION_struct *p, level_struct *l, struct Thread 
   // compute start and end indices for core
   // this puts zero for all other hyperthreads, so we can call functions below with all hyperthreads
   compute_core_start_end(p->v_start, p->v_end, &start, &end, l, threading);
-  
+
+  // ------------------------------------------------------------------------------------------------------------
+  if (g.on_solve==1) {
+    // getting the right l
+    level_struct* lb = l;
+    //for ( int i=0; i<g.which_lev; i++ ) {
+    //    lb = lb->next_level;
+    //}
+    //printf("PRINTER : depth=%d, chosen_lev=%d\n", l->depth, g.which_lev);
+    if (!strcmp(g.which_var,"A") || !strcmp(g.which_var,"Q")) {
+      int v_size = lb->vector_size;
+      if ( g.which_lev==l->depth ) {
+        printf("PRINTER : Printing %s for level : %d (at level %d)\n", g.which_var, g.which_lev, l->depth);
+        vector_PRECISION v_in  = calloc( v_size, sizeof(complex_PRECISION) );
+        vector_PRECISION v_out = calloc( v_size, sizeof(complex_PRECISION) );
+        int nr_prints = g.ind_end - g.ind_beg;
+        //for (int j=0; j<lb->inner_vector_size; j++) {
+        for (int j=0; j<nr_prints; j++) {
+          memset( v_in, 0.0, v_size*sizeof(complex_PRECISION) );
+          v_in[j+g.ind_beg] = 1.0;
+
+          if ( !strcmp(g.which_var,"A") ) {
+            if ( l->depth==0 ) {
+              apply_operator_PRECISION( v_out, v_in, p, l, threading );
+            }
+            else {
+              apply_coarse_operator_PRECISION( v_out, v_in, p->op, l, threading );
+            }
+            //apply_operator_PRECISION( v_out, v_in, p, l, threading );
+          } else {
+            if ( l->depth==0 ) {
+              //g5D_plus_clover_PRECISION( v_out, v_in, p->op, l, threading );
+              apply_operator_PRECISION( v_out, v_in, p, l, threading );
+              gamma5_PRECISION( v_out, v_out, l, threading );
+            }
+            else {
+              //g5D_apply_coarse_operator_PRECISION( v_out, v_in, p->op, l, threading );
+              apply_coarse_operator_PRECISION( v_out, v_in, p->op, l, threading );
+              coarse_gamma5_PRECISION( v_out, v_out, start, end, l );
+            }
+            //if ( p->shift ) vector_PRECISION_saxpy( v_out, v_out, v_in, -p->shift, start, end, l );
+          }
+
+          printf("PRINTER : val = ");
+          for ( int i=0; i<lb->inner_vector_size; i++ ) {
+            if ( l->depth==0 ) {
+              printf("%.16f+%.16fj -- ", creal(v_out[i]), cimag(v_out[i]));
+            } else {
+              printf("%.8f+%.8fj -- ", creal(v_out[i]), cimag(v_out[i]));
+            }
+          }
+          printf("\n");
+        }
+        free(v_in);
+        free(v_out);
+        MPI_Finalize();
+        exit(0);
+      }
+    }
+    if (!strcmp(g.which_var,"P")) {
+      printf("PRINTER : Printing P for level : %d\n", g.which_lev);
+      int v_size2 = lb->vector_size;
+      int v_size1 = lb->next_level->vector_size;
+      if ( g.which_lev==l->depth ) {
+        vector_float v_in  = calloc( v_size1, sizeof(complex_float) );
+        vector_float v_out = calloc( v_size2, sizeof(complex_float) );
+        int nr_prints = g.ind_end - g.ind_beg;
+        //for (int j=0; j<lb->next_level->inner_vector_size; j++) {
+        for (int j=0; j<nr_prints; j++) {
+          memset( v_in, 0.0, v_size1*sizeof(complex_float) );
+          v_in[j+g.ind_beg] = 1.0;
+          interpolate3_float( v_out, v_in, lb, no_threading );
+          printf("PRINTER : val = ");
+          for ( int i=0; i<lb->inner_vector_size; i++ ) {
+            printf("%.16f+%.16fj -- ", creal(v_out[i]), cimag(v_out[i]));
+          }
+          printf("\n");
+        }
+        free(v_in);
+        free(v_out);
+        MPI_Finalize();
+        exit(0);
+      }
+    }
+  }
+  // ------------------------------------------------------------------------------------------------------------
+
   for( ol=0; ol<p->num_restart && finish==0; ol++ )  {
   
     if( ol == 0 && p->initial_guess_zero ) {

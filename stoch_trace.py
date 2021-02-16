@@ -10,10 +10,45 @@ from pyamg.aggregation.adaptive import adaptive_sa_solver
 from aggregation import manual_aggregation
 from scipy.sparse import csr_matrix
 from numpy.linalg import norm as npnorm
+from scipy.sparse.linalg import norm
 import png
 
 
 
+
+
+class LevelML:
+    R = 0
+    P = 0
+    A = 0
+    Q = 0
+
+class SimpleML:
+    levels = []
+
+    def __str__(self):
+        return "For manual aggregation, printing <ml> is under construction"
+
+
+
+def gamma3_application(v):
+    v_size = int(v.shape[0]/2)
+    v[v_size:] = -v[v_size:]
+    return v
+
+
+def gamma5_application(v,l):
+
+    dof = [12,48]
+
+    sz = v.shape[0]
+
+    for i in range(int(sz/dof[l])):
+        # negate first half
+        for j in range(int(dof[l]/2)):
+            v[i*dof[l]+j] = -v[i*dof[l]+j]
+
+    return v
 
 
 # https://stackoverflow.com/questions/33713221/create-png-image-from-sparse-data
@@ -88,14 +123,19 @@ def hutchinson(A, solver, params):
         x = np.where(x==5, 1j, x)
 
         if use_Q:
-            x_size = int(x.shape[0]/2)
-            x[x_size:] = -x[x_size:]
+            if params['problem_name']=='schwinger':
+                x = gamma3_application(x)
+            elif params['problem_name']=='LQCD':
+                x = gamma5_application(x,0)
 
         z,num_iters = solver_sparse(A,x,solver_tol,solver,solver_name)
+        #print(num_iters)
 
         if use_Q:
-            x_size = int(x.shape[0]/2)
-            x[x_size:] = -x[x_size:]
+            if params['problem_name']=='schwinger':
+                x = gamma3_application(x)
+            elif params['problem_name']=='LQCD':
+                x = gamma5_application(x,0)
 
         e = np.vdot(x,z)
         ests[i] = e
@@ -125,16 +165,21 @@ def hutchinson(A, solver, params):
         x = np.where(x==5, 1j, x)
 
         if use_Q:
-            x_size = int(x.shape[0]/2)
-            x[x_size:] = -x[x_size:]
+            if params['problem_name']=='schwinger':
+                x = gamma3_application(x)
+            elif params['problem_name']=='LQCD':
+                x = gamma5_application(x,0)
 
         z,num_iters = solver_sparse(A,x,rough_solver_tol,solver,solver_name)
+        #print(num_iters)
 
         solver_iters += num_iters
 
         if use_Q:
-            x_size = int(x.shape[0]/2)
-            x[x_size:] = -x[x_size:]
+            if params['problem_name']=='schwinger':
+                x = gamma3_application(x)
+            elif params['problem_name']=='LQCD':
+                x = gamma5_application(x,0)
 
         e = np.vdot(x,z)
 
@@ -146,7 +191,7 @@ def hutchinson(A, solver, params):
         ests_dev = sqrt(np.sum(np.square(np.abs(ests[0:(i+1)]-ests_avg)))/(i+1))
         error_est = ests_dev/sqrt(i+1)
 
-        #print(str(i)+" .. "+str(ests_avg)+" .. "+str(rough_trace)+" .. "+str(error_est)+" .. "+str(rough_trace_tol)+" .. "+str(num_iters))
+        print(str(i)+" .. "+str(ests_avg)+" .. "+str(rough_trace)+" .. "+str(error_est)+" .. "+str(rough_trace_tol)+" .. "+str(num_iters))
 
         # break condition
         if i>5 and error_est<rough_trace_tol:
@@ -198,7 +243,7 @@ def mlmc(A, solver, params):
         #aggr_size = 4
         #aggrs = [aggr_size for i in range(max_nr_levels-1)]
 
-        aggrs = [4,4]
+        aggrs = [4,4,4,2]
         #aggrs = [4,4]
 
         #dof = [2]
@@ -206,10 +251,42 @@ def mlmc(A, solver, params):
         #dof_size = 8
         #[dof.append(dof_size) for i in range(max_nr_levels-1)]
 
-        dof = [2,4,32]
+        dof = [2,4,4,16,32]
         #dof = [2,2,2]
 
+        # (128x128)x2 ---> (32x32)x(4x2) ---> (8x8)x(4x2) ---> (2x2)x(16x2) ---> (1x1)x(32x2)
+
         ml = manual_aggregation(A, dof=dof, aggrs=aggrs, max_levels=max_nr_levels, dim=2)
+    elif trace_ml_constr=='from_files':
+
+        import scipy.io as sio
+
+        ml = SimpleML()
+
+        # load A at each level
+        for i in range(max_nr_levels):
+            ml.levels.append(LevelML())
+            mat_contents = sio.loadmat('LQCD_A'+str(i+1)+'.mat')
+            Axx = mat_contents['A'+str(i+1)]
+            ml.levels[i].A = Axx.copy()
+
+        # load Q at each level
+        #for i in range(max_nr_levels):
+        #    mat_contents = sio.loadmat('LQCD_Q'+str(i+1)+'.mat')
+        #    Qxx = mat_contents['Q'+str(i+1)]
+        #    ml.levels[i].Q = Qxx.copy()
+
+        # load P at each level
+        for i in range(max_nr_levels-1):
+            mat_contents = sio.loadmat('LQCD_P'+str(i+1)+'.mat')
+            Pxx = mat_contents['P'+str(i+1)]
+            ml.levels[i].P = Pxx.copy()
+            # construct R from P
+            Rxx = Pxx.copy()
+            Rxx = Rxx.conjugate()
+            Rxx = Rxx.transpose()
+            ml.levels[i].R = Rxx.copy()
+
     else:
         raise Exception("The specified <trace_multilevel_constructor> does not exist.")
     print("... done")
@@ -222,13 +299,14 @@ def mlmc(A, solver, params):
 
     print("\nRunning MG setup for each level ...")
     ml_solvers = list()
+    #for i in range(nr_levels-1):
     for i in range(nr_levels-1):
-        #mlx = pyamg.smoothed_aggregation_solver(ml.levels[i].A)
+        mlx = pyamg.smoothed_aggregation_solver(ml.levels[i].A)
         #[mlx, work] = adaptive_sa_solver(ml.levels[i].A, num_candidates=5, improvement_iters=5)
         #[mlx, work] = adaptive_sa_solver(ml.levels[i].A, num_candidates=2, candidate_iters=2, improvement_iters=3,
         #                                 strength='symmetric', aggregate='standard', max_levels=max_nr_levels-i)
-        [mlx, work] = adaptive_sa_solver(ml.levels[i].A, num_candidates=2, candidate_iters=2, improvement_iters=3,
-                                         strength='symmetric', aggregate='standard', max_levels=9)
+        #[mlx, work] = adaptive_sa_solver(ml.levels[i].A, num_candidates=2, candidate_iters=2, improvement_iters=3,
+        #                                 strength='symmetric', aggregate='standard', max_levels=9)
         ml_solvers.append(mlx)
     print("... done")
 
@@ -249,14 +327,18 @@ def mlmc(A, solver, params):
         x = np.where(x==5, 1j, x)
 
         if use_Q:
-            x_size = int(x.shape[0]/2)
-            x[x_size:] = -x[x_size:]
+            if params['problem_name']=='schwinger':
+                x = gamma3_application(x)
+            elif params['problem_name']=='LQCD':
+                x = gamma5_application(x,0)
 
         z,num_iters = solver_sparse(A,x,solver_tol,ml_solvers[0],"mg")
 
         if use_Q:
-            x_size = int(x.shape[0]/2)
-            x[x_size:] = -x[x_size:]
+            if params['problem_name']=='schwinger':
+                x = gamma3_application(x)
+            elif params['problem_name']=='LQCD':
+                x = gamma5_application(x,0)
 
         e = np.vdot(x,z)
         ests[i] = e
@@ -316,22 +398,29 @@ def mlmc(A, solver, params):
             x = cummR*x0
 
             if use_Q:
-                x_size = int(x.shape[0]/2)
-                x[x_size:] = -x[x_size:]
+                if params['problem_name']=='schwinger':
+                    x = gamma3_application(x)
+                elif params['problem_name']=='LQCD':
+                    x = gamma5_application(x,i)
 
             z,num_iters = solver_sparse(Af,x,level_solver_tol,ml_solvers[i],"mg")
+            #print(num_iters)
 
             output_params['results'][i]['solver_iters'] += num_iters
 
             if use_Q:
-                x_size = int(x.shape[0]/2)
-                x[x_size:] = -x[x_size:]
+                if params['problem_name']=='schwinger':
+                    x = gamma3_application(x)
+                elif params['problem_name']=='LQCD':
+                    x = gamma5_application(x,i)
 
             xc = R*x
 
             if use_Q:
-                xc_size = int(xc.shape[0]/2)
-                xc[xc_size:] = -xc[xc_size:]
+                if params['problem_name']=='schwinger':
+                    xc = gamma3_application(xc)
+                elif params['problem_name']=='LQCD':
+                    xc = gamma5_application(xc,i+1)
 
             # for the last level, there is no MG
             #y,num_iters = solver_sparse(Ac,xc,level_solver_tol,solver,"cg")
@@ -347,10 +436,15 @@ def mlmc(A, solver, params):
                 y,num_iters = solver_sparse(Ac,xc,level_solver_tol,ml_solvers[i+1],"mg")
             #y,num_iters = solver_sparse(Ac,xc,level_solver_tol,ml_solvers[i+1],"mg")
 
+            #print(num_iters)
+
             output_params['results'][i+1]['solver_iters'] += num_iters
 
             e1 = np.vdot(x0,cummP*z)
             e2 = np.vdot(x0,cummP*P*y)
+
+            print(e1)
+            print(e2)
 
             ests[j] = e1-e2
 
@@ -360,7 +454,7 @@ def mlmc(A, solver, params):
             ests_dev = sqrt(np.sum(np.square(np.abs(ests[0:(j+1)]-ests_avg)))/(j+1))
             error_est = ests_dev/sqrt(j+1)
 
-            #print(str(j)+" .. "+str(ests_avg)+" .. "+str(error_est)+" .. "+str(level_trace_tol))
+            print(str(j)+" .. "+str(ests_avg)+" .. "+str(error_est)+" .. "+str(level_trace_tol))
 
             # break condition
             if j>5 and error_est<level_trace_tol:
@@ -402,13 +496,17 @@ def mlmc(A, solver, params):
         x2 = cummR*x1
 
         if use_Q:
-            x2_size = int(x2.shape[0]/2)
-            x2[x2_size:] = -x2[x2_size:]
+            if params['problem_name']=='schwinger':
+                x2 = gamma3_application(x2)
+            elif params['problem_name']=='LQCD':
+                x2 = gamma5_application(x2,nr_levels-1)
 
         #y,num_iters = solver_sparse(Ac,x2,level_solver_tol,ml_solvers[nr_levels-1],"mg")
         y = np.dot(np_Ac_inv,x2)
         y = np.asarray(y).reshape(-1)
         num_iters = 1
+
+        #print(num_iters)
 
         output_params['results'][nr_levels-1]['solver_iters'] += num_iters
 
@@ -420,7 +518,7 @@ def mlmc(A, solver, params):
         ests_dev = sqrt(np.sum(np.square(np.abs(ests[0:(i+1)]-ests_avg)))/(i+1))
         error_est = ests_dev/sqrt(i+1)
 
-        #print(str(i)+" .. "+str(ests_avg)+" .. "+str(error_est)+" .. "+str(level_trace_tol))
+        print(str(i)+" .. "+str(ests_avg)+" .. "+str(error_est)+" .. "+str(level_trace_tol))
 
         # break condition
         if i>5 and error_est<level_trace_tol:

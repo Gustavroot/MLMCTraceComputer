@@ -45,15 +45,28 @@ def loadMatrix(matrix_name, params):
 
     elif len(matrix_name.split('_'))==2:
 
-        m = -0.8854 # this value is for a 16^2 lattice
-        #m = -0.03 # this value is for a 128^2 lattice
+        #m = -0.8854 # this value is for a 16^2 lattice
+        #m = -0.115 # this value is for a 128^2 lattice
+        #m = -0.0899
+
+        import scipy.io as sio
+
+        filename = matrix_name.split('_')
+
+        # check if LQCD
+        if filename[0]=='LQCD':
+            mat_contents = sio.loadmat(matrix_name)
+            A = mat_contents['A1']
+            return (A,None)
+
+        m = -0.1275
+
+        #m = 4.5
 
         # get filename and load
-        filename = matrix_name.split('_')
         if not filename[0]=='mat':
             raise Exception("From <loadMatrix(...)> : the format of the filename should be <mat_X.mat>")
 
-        import scipy.io as sio
         mat_contents = sio.loadmat(matrix_name)
 
         A = mat_contents['S']

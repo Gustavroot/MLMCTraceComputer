@@ -22,12 +22,12 @@ OBJDB = $(patsubst %.o,%_db.o,$(OBJ))
 DEP = $(patsubst %.c,%.dep,$(GSRC))
 
 # --- FLAGS -------------------------------------------
-OPT_FLAGS = -fopenmp -DOPENMP
+OPT_FLAGS = -fopenmp -DOPENMP #-DSSE -msse4.2
 #CFLAGS = -DPARAMOUTPUT -DTRACK_RES -DFGMRES_RESTEST -DPROFILING
 # -DSINGLE_ALLREDUCE_ARNOLDI
 # -DCOARSE_RES -DSCHWARZ_RES -DTESTVECTOR_ANALYSIS
 OPT_VERSION_FLAGS =$(OPT_FLAGS) -O3 -ffast-math
-#DEBUG_VERSION_FLAGS = $(OPT_FLAGS)
+DEBUG_VERSION_FLAGS = $(OPT_FLAGS)
 
 # --- FLAGS FOR HDF5 ---------------------------------
 # H5HEADERS=-DHAVE_HDF5 /usr/include
@@ -70,7 +70,7 @@ $(BUILDDIR)/%.o: $(GSRCDIR)/%.c $(SRCDIR)/*.h
 	$(CC) $(CFLAGS) $(OPT_VERSION_FLAGS) $(H5HEADERS) $(LIMEH) -c $< -o $@
 
 $(BUILDDIR)/%_db.o: $(GSRCDIR)/%.c $(SRCDIR)/*.h
-	$(CC) -g $(CFLAGS) $(DEBUG_VERSION_FLAGS) $(H5HEADERS) $(LIMEH) -c $< -o $@
+	$(CC) -g $(CFLAGS) $(DEBUG_VERSION_FLAGS) $(H5HEADERS) $(LIMEH) -c $< -o $@ #-DDEBUG
 
 $(GSRCDIR)/%.h: $(SRCDIR)/%.h $(firstword $(MAKEFILE_LIST))
 	cp $< $@

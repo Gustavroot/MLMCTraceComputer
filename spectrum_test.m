@@ -2,9 +2,11 @@ load Af.mat;
 load Ac.mat;
 load P.mat;
 
-%spy(Af)
+spy(Af)
 %spy(Ac)
 %spy(P)
+
+return;
 
 Qf = Af(:,:);
 [m,n] = size(Qf);

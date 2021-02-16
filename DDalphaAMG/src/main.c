@@ -101,6 +101,13 @@ int main( int argc, char **argv ) {
     struct Thread threading;
     setup_threading(&threading, commonthreaddata, &l);
     setup_no_threading(no_threading, &l);
+
+    strcpy(g.which_var, argv[2]);
+    g.which_lev = atoi(argv[3]);
+    g.ind_beg = atoi(argv[4]);
+    g.ind_end = atoi(argv[5]);
+
+    g.on_solve = 0;
     
     // setup up initial MG hierarchy
     method_setup( NULL, &l, &threading );
@@ -108,99 +115,10 @@ int main( int argc, char **argv ) {
     // iterative phase
     method_update( l.setup_iter, &l, &threading );
 
-    int lvl_nr = atoi(argv[3]);
     //int col_nr = atoi(argv[4]);
 
-    // d_plus_clover_float
-    // apply_coarse_operator_float
-    // interpolate_float
+    g.on_solve = 1;
 
-    // getting the right l
-    level_struct* lb = &l;
-    for ( int i=0; i<lvl_nr; i++ ) {
-        lb = lb->next_level;
-    }
-
-    if (!strcmp(argv[2],"A")) {
-      printf("PRINTER : Printing A for level : %d\n", lvl_nr);
-
-      int v_size = lb->vector_size;
-
-      if ( lvl_nr==0 ) {
-        vector_double v_in  = calloc( v_size, sizeof(complex_double) );
-        vector_double v_out = calloc( v_size, sizeof(complex_double) );
-
-        for (int j=0; j<lb->inner_vector_size; j++) {
-
-          memset( v_in, 0.0, v_size*sizeof(complex_double) );
-          v_in[j] = 1.0;
-
-          d_plus_clover_double( v_out, v_in, &(g.op_double), lb, no_threading );
-
-          printf("PRINTER : val = ");
-          for ( int i=0; i<lb->inner_vector_size; i++ ) {
-              printf("%.16f+%.16fj -- ", creal(v_out[i]), cimag(v_out[i]));
-          }
-          printf("\n");
-        }
-
-        free(v_in);
-        free(v_out);
-      } else {
-        vector_float v_in  = calloc( v_size, sizeof(complex_float) );
-        vector_float v_out = calloc( v_size, sizeof(complex_float) );
-
-        for (int j=0; j<lb->inner_vector_size; j++) {
-
-          memset( v_in, 0.0, v_size*sizeof(complex_float) );
-          v_in[j] = 1.0;
-
-          apply_coarse_operator_float( v_out, v_in, lb->p_float.op, lb, no_threading );
-
-          printf("PRINTER : val = ");
-          for ( int i=0; i<lb->inner_vector_size; i++ ) {
-              printf("%.16f+%.16fj -- ", creal(v_out[i]), cimag(v_out[i]));
-          }
-          printf("\n");
-        }
-
-        free(v_in);
-        free(v_out);
-      }
-
-      //printf("PRINTER : %d\n", v_size);
-      //printf("PRINTER : %d\n", lb->inner_vector_size);
-
-      printf("\n");
-    }
-
-    if (!strcmp(argv[2],"P")) {
-      printf("PRINTER : Printing P for level : %d\n", lvl_nr);
-
-      int v_size2 = lb->vector_size;
-      int v_size1 = lb->next_level->vector_size;
-
-      vector_float v_in  = calloc( v_size1, sizeof(complex_float) );
-      vector_float v_out = calloc( v_size2, sizeof(complex_float) );
-
-      for (int j=0; j<lb->next_level->inner_vector_size; j++) {
-
-        memset( v_in, 0.0, v_size1*sizeof(complex_float) );
-        v_in[j] = 1.0;
-
-        interpolate3_float( v_out, v_in, lb, no_threading );
-
-        printf("PRINTER : val = ");
-        for ( int i=0; i<lb->inner_vector_size; i++ ) {
-            printf("%.16f+%.16fj -- ", creal(v_out[i]), cimag(v_out[i]));
-        }
-        printf("\n");
-      }
-
-      free(v_in);
-      free(v_out);
-    }
-    
     solve_driver( &l, &threading );
   }
   

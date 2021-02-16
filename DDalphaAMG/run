@@ -7,9 +7,9 @@ iparam[1]=$2
 
 iparam[2]=$3 # A or P
 iparam[3]=$4 # level
+iparam[4]=$5 # init column
+iparam[5]=$6 # end column
 
-iparam[4]=$5
-iparam[5]=$6
 iparam[6]=$7
 iparam[7]=$8
 iparam[8]=$9
@@ -189,7 +189,7 @@ fi
 if [ ${ipa[0]} = 0  ]
 then
 #   /opt/mpich/ch-p4/bin/mpirun $shareoption -np $np $exec $inputfile
-  mpirun $shareoption -np $np $exec $inputfile ${iparam[2]} ${iparam[3]} ${iparam[4]}
+  mpirun $shareoption -np $np $exec $inputfile ${iparam[2]} ${iparam[3]} ${iparam[4]} ${iparam[5]}
 else
   cp $inputfile output/${opf}.txt
   echo "" >> output/${opf}.txt

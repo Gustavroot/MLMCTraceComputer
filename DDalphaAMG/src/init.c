@@ -868,7 +868,8 @@ void read_solver_parameters( FILE *in, level_struct *l ) {
   read_parameter( &save_pt, "print mode:", "%d", 1, in, _DEFAULT_SET );
   
   if ( g.randomize ) {
-    srand( time( 0 ) + 1000*g.my_rank );
+    //srand( time( 0 ) + 1000*g.my_rank );
+    srand( 12345 + 1000*g.my_rank );
   } else 
     srand( 1000*g.my_rank );
 }
