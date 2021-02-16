@@ -15,6 +15,12 @@ if __name__=='__main__':
 
     # options of matrices for testing :
 
+    matrix_params['N'] = 47
+    params['matrix'] = 'spd_GD97b.mat'
+    matrix_params['problem_name'] = 'whatever'
+    matrix_params['shift'] = 1000.95
+    matrix_params['sign'] = 'plus' # or minus
+
     # 1. for Gauge Laplacian
     #matrix_params['N'] = 16
     #matrix_params['alpha'] = 1.0
@@ -41,18 +47,18 @@ if __name__=='__main__':
     #matrix_params['problem_name'] = 'schwinger'
 
     # 6. for LQCD
-    matrix_params['N'] = 0
-    params['matrix'] = 'LQCD_A1.mat'
-    matrix_params['problem_name'] = 'LQCD'
+    #matrix_params['N'] = 0
+    #params['matrix'] = 'LQCD_A1.mat'
+    #matrix_params['problem_name'] = 'LQCD'
 
     params['matrix_params'] = matrix_params
     params['solver'] = 'mg'
-    params['trace_tol'] = 9.0e-1
-    params['trace_use_Q'] = True
+    params['trace_tol'] = 1.0e-1
+    params['trace_use_Q'] = False
     params['solver_tol'] = 1e-3
-    params['max_nr_levels'] = 2
+    params['max_nr_levels'] = 4
 
-    #EXAMPLE_001(params)
+    EXAMPLE_001(params)
 
     # --------------------------------
     np.random.seed(51234)
@@ -63,6 +69,12 @@ if __name__=='__main__':
 
     # options of matrices for testing :
 
+    matrix_params['N'] = 47
+    params['matrix'] = 'spd_GD97b.mat'
+    matrix_params['problem_name'] = 'whatever'
+    matrix_params['shift'] = 1000.95
+    matrix_params['sign'] = 'plus' # or minus
+
     # 1. for Gauge Laplacian
     #matrix_params['N'] = 16
     #matrix_params['alpha'] = 1.0
@@ -89,17 +101,18 @@ if __name__=='__main__':
     #matrix_params['problem_name'] = 'schwinger'
 
     # 6. for LQCD
-    matrix_params['N'] = 0
-    params['matrix'] = 'LQCD_A1.mat'
-    matrix_params['problem_name'] = 'LQCD'
+    #matrix_params['N'] = 0
+    #params['matrix'] = 'LQCD_A1.mat'
+    #matrix_params['problem_name'] = 'LQCD'
 
     params['matrix_params'] = matrix_params
-    params['solver'] = 'gmres'
-    params['trace_tol'] = 9.0e-1
-    params['trace_use_Q'] = True
+    params['solver'] = 'cg'
+    params['trace_tol'] = 1.0e-1
+    params['trace_use_Q'] = False
     #params['trace_multilevel_construction'] = 'manual_aggregation'
-    params['trace_multilevel_construction'] = 'from_files'
+    #params['trace_multilevel_construction'] = 'from_files'
+    params['trace_multilevel_construction'] = 'pyamg'
     params['solver_tol'] = 1e-3
     params['solver_lambda_min'] = 1e-2
-    params['max_nr_levels'] = 2
+    params['max_nr_levels'] = 4
     EXAMPLE_002(params)

@@ -1,6 +1,8 @@
 # All the resources needed to load and manipulate matrices
 import warnings
 from scipy.sparse import identity
+from scipy.sparse import csr_matrix
+import matplotlib.pylab as plt
 
 
 
@@ -42,6 +44,28 @@ def loadMatrix(matrix_name, params):
 
         stencil = diffusion_stencil_2d()
         return (stencil_grid(stencil, (N,N), format='csr'),None)
+
+    elif len(matrix_name.split('_'))==2 and matrix_name.split('_')[0]=='spd':
+
+        import scipy.io as sio
+
+        mat_contents = sio.loadmat(matrix_name)
+        Axx = mat_contents['Problem']['A'][0,0]
+        Ax = csr_matrix(Axx)
+
+        if params['sign'] == 'plus': sign=1
+        elif params['sign'] == 'minus': sign=-1
+        else : raise Exception("SIGN WRONG !!")
+
+        shift = params['shift']
+
+        A = shift*identity(Ax.shape[0],dtype=Ax.dtype) + sign*Ax
+
+        #plt.spy(A)
+        #plt.show()
+
+        return (A,None)
+
 
     elif len(matrix_name.split('_'))==2:
 

@@ -12,7 +12,7 @@ from scipy.sparse import csr_matrix
 from numpy.linalg import norm as npnorm
 from scipy.sparse.linalg import norm
 import png
-
+from numpy.linalg import eigh
 
 
 
@@ -121,6 +121,7 @@ def hutchinson(A, solver, params):
         x -= 1
         x = np.where(x==3, -1j, x)
         x = np.where(x==5, 1j, x)
+        x = x.astype(A.dtype)
 
         if use_Q:
             if params['problem_name']=='schwinger':
@@ -163,6 +164,7 @@ def hutchinson(A, solver, params):
         x -= 1
         x = np.where(x==3, -1j, x)
         x = np.where(x==5, 1j, x)
+        x = x.astype(A.dtype)
 
         if use_Q:
             if params['problem_name']=='schwinger':
@@ -191,7 +193,7 @@ def hutchinson(A, solver, params):
         ests_dev = sqrt(np.sum(np.square(np.abs(ests[0:(i+1)]-ests_avg)))/(i+1))
         error_est = ests_dev/sqrt(i+1)
 
-        print(str(i)+" .. "+str(ests_avg)+" .. "+str(rough_trace)+" .. "+str(error_est)+" .. "+str(rough_trace_tol)+" .. "+str(num_iters))
+        #print(str(i)+" .. "+str(ests_avg)+" .. "+str(rough_trace)+" .. "+str(error_est)+" .. "+str(rough_trace_tol)+" .. "+str(num_iters))
 
         # break condition
         if i>5 and error_est<rough_trace_tol:
@@ -297,6 +299,9 @@ def mlmc(A, solver, params):
     # the actual number of levels
     nr_levels = len(ml.levels)
 
+    for i in range(nr_levels):
+        print("size(A"+str(i)+") = "+str(ml.levels[i].A.shape[0])+"x"+str(ml.levels[i].A.shape[1]))
+
     print("\nRunning MG setup for each level ...")
     ml_solvers = list()
     #for i in range(nr_levels-1):
@@ -325,6 +330,7 @@ def mlmc(A, solver, params):
         x -= 1
         x = np.where(x==3, -1j, x)
         x = np.where(x==5, 1j, x)
+        x = x.astype(A.dtype)
 
         if use_Q:
             if params['problem_name']=='schwinger':
@@ -394,6 +400,7 @@ def mlmc(A, solver, params):
             x0 -= 1
             x0 = np.where(x0==3, -1j, x0)
             x0 = np.where(x0==5, 1j, x0)
+            x0 = x0.astype(A.dtype)
 
             x = cummR*x0
 
@@ -429,6 +436,11 @@ def mlmc(A, solver, params):
                 #y,num_iters = solver_sparse(Ac,xc,level_solver_tol,solver,"cg")
                 # solve directly
                 np_Ac = Ac.todense()
+
+                #w,v = eigh(np_Ac)
+                #print(w)
+                #exit(0)
+
                 y = np.dot(np.linalg.inv(np_Ac),xc)
                 y = np.asarray(y).reshape(-1)
                 num_iters = 1
@@ -443,8 +455,8 @@ def mlmc(A, solver, params):
             e1 = np.vdot(x0,cummP*z)
             e2 = np.vdot(x0,cummP*P*y)
 
-            print(e1)
-            print(e2)
+            #print(e1)
+            #print(e2)
 
             ests[j] = e1-e2
 
@@ -454,7 +466,7 @@ def mlmc(A, solver, params):
             ests_dev = sqrt(np.sum(np.square(np.abs(ests[0:(j+1)]-ests_avg)))/(j+1))
             error_est = ests_dev/sqrt(j+1)
 
-            print(str(j)+" .. "+str(ests_avg)+" .. "+str(error_est)+" .. "+str(level_trace_tol))
+            #print(str(j)+" .. "+str(ests_avg)+" .. "+str(error_est)+" .. "+str(level_trace_tol))
 
             # break condition
             if j>5 and error_est<level_trace_tol:
@@ -491,6 +503,7 @@ def mlmc(A, solver, params):
         xc -= 1
         xc = np.where(xc==3, -1j, xc)
         xc = np.where(xc==5, 1j, xc)
+        xc = xc.astype(A.dtype)
 
         x1 = cummP*xc
         x2 = cummR*x1
@@ -518,7 +531,7 @@ def mlmc(A, solver, params):
         ests_dev = sqrt(np.sum(np.square(np.abs(ests[0:(i+1)]-ests_avg)))/(i+1))
         error_est = ests_dev/sqrt(i+1)
 
-        print(str(i)+" .. "+str(ests_avg)+" .. "+str(error_est)+" .. "+str(level_trace_tol))
+        #print(str(i)+" .. "+str(ests_avg)+" .. "+str(error_est)+" .. "+str(level_trace_tol))
 
         # break condition
         if i>5 and error_est<level_trace_tol:
