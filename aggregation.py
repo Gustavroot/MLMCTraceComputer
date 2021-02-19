@@ -60,7 +60,7 @@ def write_png(A, filename):
 # <aggrs> : per level, this is the block size. So, if at a certain level the
 #           value is 4, then the aggregates are of size 4^d, where d is the
 #           dimensionality of the physical problem
-def manual_aggregation(A, dof=[2,2,2], aggrs=[2,2], max_levels=3, dim=2):
+def manual_aggregation(A, dof=[2,2,2], aggrs=[2*2,2*2], max_levels=3, dim=2):
 
     # assuming a (roughly) minimum coarsest-level size for the matrix
     min_coarsest_size = 8
@@ -92,13 +92,18 @@ def manual_aggregation(A, dof=[2,2,2], aggrs=[2,2], max_levels=3, dim=2):
         print("\teigensolving at level "+str(i)+" ...")
 
         nt = 1
-        eigvals,eig_vecsx = eigsh(Al, k=nt*dof[i+1], which='SM', return_eigenvectors=True, tol=1e-5, maxiter=1000000)
+        #eigvals,eig_vecsx = eigsh(Al, k=nt*dof[i+1], which='SM', return_eigenvectors=True, tol=1e-5, maxiter=1000000)
+        eigvals,eig_vecsx = eigs(Al, k=nt*dof[i+1], which='SM', return_eigenvectors=True, tol=1e-5, maxiter=1000000)
 
         eig_vecs = np.zeros((Al.shape[0],dof[i+1]), dtype=Al.dtype)
+
+        #coeffs = [ 1.0/float(k+1) for k in range(nt) ]
+        coeffs = [ 1.0 for k in range(nt) ]
 
         for j in range(dof[i+1]):
             for k in range(nt):
                 eig_vecs[:,j] += eig_vecsx[:,nt*j+k]
+                #eig_vecs[:,j] += coeffs[k]*eig_vecsx[:,j+dof[i+1]*k]
 
         print("\t... done")
 
@@ -107,7 +112,8 @@ def manual_aggregation(A, dof=[2,2,2], aggrs=[2,2], max_levels=3, dim=2):
 
         print("\tconstructing P at level "+str(i)+" ...")
 
-        aggr_size = aggrs[i]*aggrs[i]*dof[i]
+        #aggr_size = aggrs[i]*aggrs[i]*dof[i]
+        aggr_size = aggrs[i]*dof[i]
         aggr_size_half = int(aggr_size/2)
         nr_aggrs = int(Al.shape[0]/aggr_size)
 
@@ -240,9 +246,9 @@ def manual_aggregation(A, dof=[2,2,2], aggrs=[2,2], max_levels=3, dim=2):
     print("\tsize(A) = "+str(Al.shape))
 
     # creating Q -- Schwinger specific
-    for i in range(len(ml.levels)):
-        half_size = int(ml.levels[i].A.shape[0]/2)
-        ml.levels[i].Q = ml.levels[i].A.copy()
-        ml.levels[i].Q[mat_size_half:,:] = -ml.levels[i].Q[mat_size_half:,:]
+    #for i in range(len(ml.levels)):
+    #    half_size = int(ml.levels[i].A.shape[0]/2)
+    #    ml.levels[i].Q = ml.levels[i].A.copy()
+    #    ml.levels[i].Q[mat_size_half:,:] = -ml.levels[i].Q[mat_size_half:,:]
 
     return ml

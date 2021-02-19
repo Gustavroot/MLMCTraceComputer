@@ -15,11 +15,13 @@ if __name__=='__main__':
 
     # options of matrices for testing :
 
+    # with G the matrix from Suite Sparse, then, we are computing
+    # here tr(A^{-1}) with A = a1*I + a2*G
     matrix_params['N'] = 47
     params['matrix'] = 'spd_GD97b.mat'
     matrix_params['problem_name'] = 'whatever'
-    matrix_params['shift'] = 1000.95
-    matrix_params['sign'] = 'plus' # or minus
+    matrix_params['a1'] = 1000.95
+    matrix_params['a2'] = 1.0
 
     # 1. for Gauge Laplacian
     #matrix_params['N'] = 16
@@ -69,11 +71,13 @@ if __name__=='__main__':
 
     # options of matrices for testing :
 
+    # with G the matrix from Suite Sparse, then, we are computing
+    # here tr(A^{-1}) with A = a1*I + a2*G
     matrix_params['N'] = 47
     params['matrix'] = 'spd_GD97b.mat'
     matrix_params['problem_name'] = 'whatever'
-    matrix_params['shift'] = 1000.95
-    matrix_params['sign'] = 'plus' # or minus
+    matrix_params['a1'] = 1000.95
+    matrix_params['a2'] = 1.0
 
     # 1. for Gauge Laplacian
     #matrix_params['N'] = 16
@@ -106,7 +110,7 @@ if __name__=='__main__':
     #matrix_params['problem_name'] = 'LQCD'
 
     params['matrix_params'] = matrix_params
-    params['solver'] = 'cg'
+    params['solver'] = 'gmres'
     params['trace_tol'] = 1.0e-1
     params['trace_use_Q'] = False
     #params['trace_multilevel_construction'] = 'manual_aggregation'
@@ -114,5 +118,6 @@ if __name__=='__main__':
     params['trace_multilevel_construction'] = 'pyamg'
     params['solver_tol'] = 1e-3
     params['solver_lambda_min'] = 1e-2
-    params['max_nr_levels'] = 4
+    params['max_nr_levels'] = 2
+
     EXAMPLE_002(params)

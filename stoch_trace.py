@@ -13,6 +13,7 @@ from numpy.linalg import norm as npnorm
 from scipy.sparse.linalg import norm
 import png
 from numpy.linalg import eigh
+from scipy.sparse import identity
 
 
 
@@ -39,7 +40,7 @@ def gamma3_application(v):
 
 def gamma5_application(v,l):
 
-    dof = [12,48]
+    dof = [12,192]
 
     sz = v.shape[0]
 
@@ -105,22 +106,68 @@ def hutchinson(A, solver, params):
     # size of the problem
     N = A.shape[0]
 
-    solver_tol = 1e-9
+    solver_tol = 1e-5
 
     np.random.seed(123456)
 
+    # FIXME
+    # testing the solver
+    #solution = np.random.rand(A.shape[0])
+    #solution = solution.astype(A.dtype)
+    #rhs = A*solution
+
+    #z,num_iters = solver_sparse(A,rhs,solver_tol,solver,solver_name)
+
+    #print(npnorm( z-solution )/npnorm(solution))
+    #print(npnorm( rhs-A*z )/npnorm(rhs))
+    #print(num_iters)
+    #print("Positive definite? "+str(np.all( np.real(np.linalg.eigvals(A.todense())) > 0 )))
+    #exit(0)
+
+    #Ax = A.todense()
+    #Axinv = np.linalg.inv(Ax)
+    #offdiag_fro_norm = npnorm( Axinv-Axinv.diagonal(), ord='fro' )
+    #print("\nTheoretical estimation of variance : "+str(offdiag_fro_norm))
+
+    #offdiag_fro_norm = 0.0
+    #for i in range(A.shape[0]):
+    #    print(i)
+    #    probe = np.zeros(A.shape[0])
+    #    probe[i] = 1.0
+    #    z,num_iters = solver_sparse(A,probe,solver_tol,solver,solver_name)
+    #    print(num_iters)
+    #    offdiag_fro_norm += z[i]
+    #print("\nTheoretical estimation of variance : "+str(offdiag_fro_norm))
+
+    #try:
+    #    np.linalg.cholesky(A.todense())
+    #    is_spd = True
+    #except np.linalg.LinAlgError:
+    #    is_spd = False
+
+    ##print("Positive definite? "+str(np.all( np.real(np.linalg.eigvals(A.todense())) > 0))+"\n")
+    #print("Positive definite? "+str(is_spd)+"\n")
+
+    #exit(0)
+
     # pre-compute a rough estimate of the trace, to set then a tolerance
-    nr_rough_iters = 10
+    nr_rough_iters = 6
     ests = np.zeros(nr_rough_iters, dtype=A.dtype)
     # main Hutchinson loop
     for i in range(nr_rough_iters):
 
         # generate a Rademacher vector
-        x = np.random.randint(4, size=N)
+
+        x = np.random.randint(2, size=N)
         x *= 2
         x -= 1
-        x = np.where(x==3, -1j, x)
-        x = np.where(x==5, 1j, x)
+
+        #x = np.random.randint(4, size=N)
+        #x *= 2
+        #x -= 1
+        #x = np.where(x==3, -1j, x)
+        #x = np.where(x==5, 1j, x)
+
         x = x.astype(A.dtype)
 
         if use_Q:
@@ -130,6 +177,11 @@ def hutchinson(A, solver, params):
                 x = gamma5_application(x,0)
 
         z,num_iters = solver_sparse(A,x,solver_tol,solver,solver_name)
+
+        #np_A = np.copy(A.todense())
+        #z = np.dot(np.linalg.inv(np_A),x)
+        #num_iters = 1
+
         #print(num_iters)
 
         if use_Q:
@@ -151,7 +203,7 @@ def hutchinson(A, solver, params):
     #rough_solver_tol = rough_trace_tol*lambda_min/N
     rough_solver_tol = abs(rough_trace_tol/N)
 
-    rough_solver_tol = 1e-9
+    rough_solver_tol = 1e-5
 
     solver_iters = 0
     ests = np.zeros(trace_max_nr_ests, dtype=A.dtype)
@@ -159,11 +211,17 @@ def hutchinson(A, solver, params):
     for i in range(trace_max_nr_ests):
 
         # generate a Rademacher vector
-        x = np.random.randint(4, size=N)
+
+        x = np.random.randint(2, size=N)
         x *= 2
         x -= 1
-        x = np.where(x==3, -1j, x)
-        x = np.where(x==5, 1j, x)
+
+        #x = np.random.randint(4, size=N)
+        #x *= 2
+        #x -= 1
+        #x = np.where(x==3, -1j, x)
+        #x = np.where(x==5, 1j, x)
+
         x = x.astype(A.dtype)
 
         if use_Q:
@@ -173,6 +231,11 @@ def hutchinson(A, solver, params):
                 x = gamma5_application(x,0)
 
         z,num_iters = solver_sparse(A,x,rough_solver_tol,solver,solver_name)
+
+        #np_A = np.copy(A.todense())
+        #z = np.dot(np.linalg.inv(np_A),x)
+        #num_iters = 1
+
         #print(num_iters)
 
         solver_iters += num_iters
@@ -245,7 +308,8 @@ def mlmc(A, solver, params):
         #aggr_size = 4
         #aggrs = [aggr_size for i in range(max_nr_levels-1)]
 
-        aggrs = [4,4,4,2]
+        #aggrs = [2,4,4,2]
+        aggrs = [8*8*8*8]
         #aggrs = [4,4]
 
         #dof = [2]
@@ -253,7 +317,8 @@ def mlmc(A, solver, params):
         #dof_size = 8
         #[dof.append(dof_size) for i in range(max_nr_levels-1)]
 
-        dof = [2,4,4,16,32]
+        #dof = [2,2,4,16,32]
+        dof = [12,12]
         #dof = [2,2,2]
 
         # (128x128)x2 ---> (32x32)x(4x2) ---> (8x8)x(4x2) ---> (2x2)x(16x2) ---> (1x1)x(32x2)
@@ -268,9 +333,10 @@ def mlmc(A, solver, params):
         # load A at each level
         for i in range(max_nr_levels):
             ml.levels.append(LevelML())
-            mat_contents = sio.loadmat('LQCD_A'+str(i+1)+'.mat')
-            Axx = mat_contents['A'+str(i+1)]
-            ml.levels[i].A = Axx.copy()
+            if i==0:
+                mat_contents = sio.loadmat('LQCD_A'+str(i+1)+'.mat')
+                Axx = mat_contents['A'+str(i+1)]
+                ml.levels[i].A = Axx.copy()
 
         # load Q at each level
         #for i in range(max_nr_levels):
@@ -289,9 +355,28 @@ def mlmc(A, solver, params):
             Rxx = Rxx.transpose()
             ml.levels[i].R = Rxx.copy()
 
+        # build the other A's
+        for i in range(1,max_nr_levels):
+            ml.levels[i].A = ml.levels[i-1].R*ml.levels[i-1].A*ml.levels[i-1].P
+
+        #l = 0
+        #v = np.random.rand(ml.levels[l].A.shape[0])
+        #v1 = ml.levels[l].A*v
+        #v1 = gamma5_application(v1,l)
+        #v2 = ml.levels[l].Q*v
+        #print(npnorm(v2-v1))
+
     else:
         raise Exception("The specified <trace_multilevel_constructor> does not exist.")
     print("... done")
+
+    #diffA = ml.levels[1].A - ml.levels[0].R*ml.levels[0].A*ml.levels[0].P
+    #print( npnorm(diffA.todense(),'fro') )
+
+    #diffP = identity(ml.levels[0].P.shape[1]) - ml.levels[0].P.getH()*ml.levels[0].P
+    #print( npnorm(diffP.todense(),'fro') )
+
+    #exit(0)
 
     print("\nMultilevel information:")
     print(ml)
@@ -301,6 +386,46 @@ def mlmc(A, solver, params):
 
     for i in range(nr_levels):
         print("size(A"+str(i)+") = "+str(ml.levels[i].A.shape[0])+"x"+str(ml.levels[i].A.shape[1]))
+
+    print("")
+
+    """
+    #print(npnorm(A.todense()-ml.levels[0].A.todense(),'fro'))
+
+    Bx1 = ml.levels[0].A.copy().todense()
+    Bx2 = ml.levels[1].A.copy().todense()
+    Cx1 = ml.levels[0].P.copy()
+    Dx1 = ml.levels[0].R.copy()
+    Bx1inv = np.linalg.inv(Bx1)
+    Bx2inv = np.linalg.inv(Bx2)
+    Bx2invproj = Cx1*Bx2inv*Dx1
+    diffxinv = Bx1inv - Bx2invproj
+    offdiag_fro_norm = npnorm( diffxinv-diffxinv.diagonal(), ord='fro' )
+    print("\nTheoretical estimation of variance, diff : "+str(offdiag_fro_norm))
+
+    #print("Applying gamma5 ...")
+    #for i in range(diffxinv.shape[0]):
+    #    diffxinv[:,i] = gamma5_application(diffxinv[:,i],0)
+    #print("... done")
+    #offdiag_fro_norm = npnorm( diffxinv-diffxinv.diagonal(), ord='fro' )
+    #print("\nTheoretical estimation of variance, diff with gamma5 : "+str(offdiag_fro_norm))
+
+    #Ax = A.todense()
+    #Axinv = np.linalg.inv(Ax)
+    offdiag_fro_norm = npnorm( Bx1inv-Bx1inv.diagonal(), ord='fro' )
+    print("\nTheoretical estimation of variance, pure : "+str(offdiag_fro_norm))
+
+    #try:
+    #    np.linalg.cholesky(A.todense())
+    #    is_spd = True
+    #except np.linalg.LinAlgError:
+    #    is_spd = False
+
+    #print("Positive definite? "+str(is_spd)+"\n")
+    ##print("Positive definite? "+str(np.all( np.real(np.linalg.eigvals(A.todense())) > 0))+"\n")
+
+    exit(0)
+    """
 
     print("\nRunning MG setup for each level ...")
     ml_solvers = list()
@@ -315,21 +440,27 @@ def mlmc(A, solver, params):
         ml_solvers.append(mlx)
     print("... done")
 
-    solver_tol = 1e-9
+    solver_tol = 1e-5
 
     print("\nComputing rough estimation of the trace ...")
     np.random.seed(123456)
     # pre-compute a rough estimate of the trace, to set then a tolerance
-    nr_rough_iters = 10
+    nr_rough_iters = 6
     ests = np.zeros(nr_rough_iters, dtype=A.dtype)
     # main Hutchinson loop
     for i in range(nr_rough_iters):
         # generate a Rademacher vector
-        x = np.random.randint(4, size=N)
+
+        x = np.random.randint(2, size=N)
         x *= 2
         x -= 1
-        x = np.where(x==3, -1j, x)
-        x = np.where(x==5, 1j, x)
+
+        #x = np.random.randint(4, size=N)
+        #x *= 2
+        #x -= 1
+        #x = np.where(x==3, -1j, x)
+        #x = np.where(x==5, 1j, x)
+
         x = x.astype(A.dtype)
 
         if use_Q:
@@ -339,6 +470,11 @@ def mlmc(A, solver, params):
                 x = gamma5_application(x,0)
 
         z,num_iters = solver_sparse(A,x,solver_tol,ml_solvers[0],"mg")
+        #print(num_iters)
+
+        #np_A = np.copy(A.todense())
+        #z = np.dot(np.linalg.inv(np_A),x)
+        #num_iters = 1
 
         if use_Q:
             if params['problem_name']=='schwinger':
@@ -374,7 +510,7 @@ def mlmc(A, solver, params):
     level_solver_tol = level_trace_tol/N
 
     #level_solver_tol = 1e-9/sqrt(nr_levels)
-    level_solver_tol = 1e-9
+    level_solver_tol = 1e-5
 
     print("")
 
@@ -395,11 +531,17 @@ def mlmc(A, solver, params):
         for j in range(trace_max_nr_ests):
 
             # generate a Rademacher vector
-            x0 = np.random.randint(4, size=N)
+
+            x0 = np.random.randint(2, size=N)
             x0 *= 2
             x0 -= 1
-            x0 = np.where(x0==3, -1j, x0)
-            x0 = np.where(x0==5, 1j, x0)
+
+            #x = np.random.randint(4, size=N)
+            #x *= 2
+            #x -= 1
+            #x = np.where(x==3, -1j, x)
+            #x = np.where(x==5, 1j, x)
+
             x0 = x0.astype(A.dtype)
 
             x = cummR*x0
@@ -411,6 +553,12 @@ def mlmc(A, solver, params):
                     x = gamma5_application(x,i)
 
             z,num_iters = solver_sparse(Af,x,level_solver_tol,ml_solvers[i],"mg")
+
+            #np_Af = Af.todense()
+            #z = np.dot(np.linalg.inv(np_Af),x)
+            #z = np.asarray(z).reshape(-1)
+            #num_iters = 1
+
             #print(num_iters)
 
             output_params['results'][i]['solver_iters'] += num_iters
@@ -455,6 +603,9 @@ def mlmc(A, solver, params):
             e1 = np.vdot(x0,cummP*z)
             e2 = np.vdot(x0,cummP*P*y)
 
+            #e1 = np.vdot(x0,z)
+            #e2 = np.vdot(x0,P*y)
+
             #print(e1)
             #print(e2)
 
@@ -498,11 +649,17 @@ def mlmc(A, solver, params):
     for i in range(trace_max_nr_ests):
 
         # generate a Rademacher vector
-        xc = np.random.randint(4, size=Nc)
+
+        xc = np.random.randint(2, size=Nc)
         xc *= 2
         xc -= 1
-        xc = np.where(xc==3, -1j, xc)
-        xc = np.where(xc==5, 1j, xc)
+
+        #x = np.random.randint(4, size=N)
+        #x *= 2
+        #x -= 1
+        #x = np.where(x==3, -1j, x)
+        #x = np.where(x==5, 1j, x)
+
         xc = xc.astype(A.dtype)
 
         x1 = cummP*xc

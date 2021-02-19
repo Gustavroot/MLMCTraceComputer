@@ -53,13 +53,7 @@ def loadMatrix(matrix_name, params):
         Axx = mat_contents['Problem']['A'][0,0]
         Ax = csr_matrix(Axx)
 
-        if params['sign'] == 'plus': sign=1
-        elif params['sign'] == 'minus': sign=-1
-        else : raise Exception("SIGN WRONG !!")
-
-        shift = params['shift']
-
-        A = shift*identity(Ax.shape[0],dtype=Ax.dtype) + sign*Ax
+        A = params['a1']*identity(Ax.shape[0],dtype=Ax.dtype) + params['a2']*Ax
 
         #plt.spy(A)
         #plt.show()
@@ -81,11 +75,17 @@ def loadMatrix(matrix_name, params):
         if filename[0]=='LQCD':
             mat_contents = sio.loadmat(matrix_name)
             A = mat_contents['A1']
+
+            m = -1.234
+            A += m*identity(A.shape[0], dtype=A.dtype)
+
             return (A,None)
 
-        m = -0.1275
+        # Schwinger, 16^2
+        #m = -0.8940
 
-        #m = 4.5
+        # Schwinger, 128^2
+        m = -0.13750
 
         # get filename and load
         if not filename[0]=='mat':
@@ -103,6 +103,8 @@ def loadMatrix(matrix_name, params):
 
         #print(matrix_name)
         #exit(0)
+
+        print("matrix loaded!")
 
         return (A,None)
 
