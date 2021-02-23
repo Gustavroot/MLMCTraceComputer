@@ -76,16 +76,18 @@ def loadMatrix(matrix_name, params):
             mat_contents = sio.loadmat(matrix_name)
             A = mat_contents['A1']
 
-            m = -1.234
+            m = 1.0
             A += m*identity(A.shape[0], dtype=A.dtype)
 
             return (A,None)
 
         # Schwinger, 16^2
-        #m = -0.8940
+        m = -0.8940
 
         # Schwinger, 128^2
-        m = -0.13750
+        #m = -0.12750
+        #m = -0.13750
+        #m = -0.13250
 
         # get filename and load
         if not filename[0]=='mat':
@@ -104,7 +106,7 @@ def loadMatrix(matrix_name, params):
         #print(matrix_name)
         #exit(0)
 
-        print("matrix loaded!")
+        #print("matrix loaded!")
 
         return (A,None)
 

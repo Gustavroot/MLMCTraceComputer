@@ -40,7 +40,7 @@ def gamma3_application(v):
 
 def gamma5_application(v,l):
 
-    dof = [12,192]
+    dof = [12,160]
 
     sz = v.shape[0]
 
@@ -106,7 +106,7 @@ def hutchinson(A, solver, params):
     # size of the problem
     N = A.shape[0]
 
-    solver_tol = 1e-5
+    solver_tol = 1e-12
 
     np.random.seed(123456)
 
@@ -203,7 +203,7 @@ def hutchinson(A, solver, params):
     #rough_solver_tol = rough_trace_tol*lambda_min/N
     rough_solver_tol = abs(rough_trace_tol/N)
 
-    rough_solver_tol = 1e-5
+    rough_solver_tol = 1e-12
 
     solver_iters = 0
     ests = np.zeros(trace_max_nr_ests, dtype=A.dtype)
@@ -253,7 +253,7 @@ def hutchinson(A, solver, params):
         # average of estimates
         ests_avg = np.sum(ests[0:(i+1)])/(i+1)
         # and standard deviation
-        ests_dev = sqrt(np.sum(np.square(np.abs(ests[0:(i+1)]-ests_avg)))/(i+1))
+        ests_dev = sqrt(   np.sum(   np.square(np.abs(ests[0:(i+1)]-ests_avg))   )/(i+1)   )
         error_est = ests_dev/sqrt(i+1)
 
         #print(str(i)+" .. "+str(ests_avg)+" .. "+str(rough_trace)+" .. "+str(error_est)+" .. "+str(rough_trace_tol)+" .. "+str(num_iters))
@@ -309,7 +309,8 @@ def mlmc(A, solver, params):
         #aggrs = [aggr_size for i in range(max_nr_levels-1)]
 
         #aggrs = [2,4,4,2]
-        aggrs = [8*8*8*8]
+        #aggrs = [2*2*2*2]
+        aggrs = [8*8]
         #aggrs = [4,4]
 
         #dof = [2]
@@ -317,8 +318,8 @@ def mlmc(A, solver, params):
         #dof_size = 8
         #[dof.append(dof_size) for i in range(max_nr_levels-1)]
 
-        #dof = [2,2,4,16,32]
-        dof = [12,12]
+        dof = [2,2,4,16,32]
+        #dof = [12,80]
         #dof = [2,2,2]
 
         # (128x128)x2 ---> (32x32)x(4x2) ---> (8x8)x(4x2) ---> (2x2)x(16x2) ---> (1x1)x(32x2)
@@ -400,8 +401,9 @@ def mlmc(A, solver, params):
     Bx2inv = np.linalg.inv(Bx2)
     Bx2invproj = Cx1*Bx2inv*Dx1
     diffxinv = Bx1inv - Bx2invproj
-    offdiag_fro_norm = npnorm( diffxinv-diffxinv.diagonal(), ord='fro' )
-    print("\nTheoretical estimation of variance, diff : "+str(offdiag_fro_norm))
+    diffxinv = diffxinv+diffxinv.transpose()
+    offdiag_fro_norm = npnorm( diffxinv-np.diag(np.diag(diffxinv)), ord='fro' )
+    print("\nTheoretical estimation of variance, diff : "+str(offdiag_fro_norm*offdiag_fro_norm))
 
     #print("Applying gamma5 ...")
     #for i in range(diffxinv.shape[0]):
@@ -412,8 +414,9 @@ def mlmc(A, solver, params):
 
     #Ax = A.todense()
     #Axinv = np.linalg.inv(Ax)
-    offdiag_fro_norm = npnorm( Bx1inv-Bx1inv.diagonal(), ord='fro' )
-    print("\nTheoretical estimation of variance, pure : "+str(offdiag_fro_norm))
+    Bx1inv1 = Bx1inv+Bx1inv.transpose()
+    offdiag_fro_norm = npnorm( Bx1inv1-np.diag(np.diag(Bx1inv1)), ord='fro' )
+    print("\nTheoretical estimation of variance, pure : "+str(offdiag_fro_norm*offdiag_fro_norm))
 
     #try:
     #    np.linalg.cholesky(A.todense())
@@ -440,7 +443,7 @@ def mlmc(A, solver, params):
         ml_solvers.append(mlx)
     print("... done")
 
-    solver_tol = 1e-5
+    solver_tol = 1e-12
 
     print("\nComputing rough estimation of the trace ...")
     np.random.seed(123456)
@@ -510,7 +513,7 @@ def mlmc(A, solver, params):
     level_solver_tol = level_trace_tol/N
 
     #level_solver_tol = 1e-9/sqrt(nr_levels)
-    level_solver_tol = 1e-5
+    level_solver_tol = 1e-12
 
     print("")
 

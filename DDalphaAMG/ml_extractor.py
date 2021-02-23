@@ -13,7 +13,7 @@ nr_levels = 2
 #sizes_A = [(49152,49152),(768,768)]
 #sizes_Q = [(49152,49152),(768,768)]
 #sizes_P = [(49152,768)]
-sizes_A = [(49152,49152),(768,768)]
+sizes_A = [(3072,3072),(768,768)]
 #sizes_Q = [(3072,3072),(1536,1536)]
 sizes_P = [(49152,768)]
 
@@ -35,7 +35,7 @@ for i in range(nr_levels):
 
     As.append(np.zeros((sizes_A[i][0],sizes_A[i][1]),dtype='complex128'))
 
-    if i==0 : round_size = 49152
+    if i==0 : round_size = 3072
     else : round_size = 768
     rounds = int(sizes_A[i][1]/round_size)
     for j in range(rounds):
