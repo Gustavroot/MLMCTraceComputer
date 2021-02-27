@@ -113,7 +113,10 @@ def manual_aggregation(A, dof=[2,2,2], aggrs=[2*2,2*2], max_levels=3, dim=2):
         print("\tconstructing P at level "+str(i)+" ...")
 
         #aggr_size = aggrs[i]*aggrs[i]*dof[i]
-        aggr_size = aggrs[i]*dof[i]
+
+        if i==0 : aggr_size = aggrs[i]*dof[i]
+        else : aggr_size = aggrs[i]*dof[i]*2
+
         aggr_size_half = int(aggr_size/2)
         nr_aggrs = int(Al.shape[0]/aggr_size)
 

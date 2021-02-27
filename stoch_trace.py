@@ -106,7 +106,7 @@ def hutchinson(A, solver, params):
     # size of the problem
     N = A.shape[0]
 
-    solver_tol = 1e-12
+    solver_tol = 1e-5
 
     np.random.seed(123456)
 
@@ -203,7 +203,7 @@ def hutchinson(A, solver, params):
     #rough_solver_tol = rough_trace_tol*lambda_min/N
     rough_solver_tol = abs(rough_trace_tol/N)
 
-    rough_solver_tol = 1e-12
+    rough_solver_tol = 1e-5
 
     solver_iters = 0
     ests = np.zeros(trace_max_nr_ests, dtype=A.dtype)
@@ -269,6 +269,7 @@ def hutchinson(A, solver, params):
     result['solver_iters'] = solver_iters
     if solver_name=='mg':
         #result['total_complexity'] = solver.cycle_complexity()*solver_iters
+        #print( "flops/cycle = "+str(flopsV(len(solver.levels),solver.levels,0)) )
         result['total_complexity'] = flopsV(len(solver.levels), solver.levels, 0)*solver_iters
 
     return result
@@ -301,7 +302,7 @@ def mlmc(A, solver, params):
         #ml = pyamg.smoothed_aggregation_solver(A)
         #[ml, work] = adaptive_sa_solver(A, num_candidates=5, improvement_iters=5)
         [ml, work] = adaptive_sa_solver(A, num_candidates=2, candidate_iters=2, improvement_iters=3,
-                                        strength='symmetric', aggregate='standard', max_levels=max_nr_levels)
+                                        strength='symmetric', aggregate='standard', max_levels=9)
     elif trace_ml_constr=='manual_aggregation':
 
         # TODO : get <aggr_size> from input params
@@ -310,7 +311,7 @@ def mlmc(A, solver, params):
 
         #aggrs = [2,4,4,2]
         #aggrs = [2*2*2*2]
-        aggrs = [8*8]
+        aggrs = [8*8,8*8]
         #aggrs = [4,4]
 
         #dof = [2]
@@ -318,7 +319,7 @@ def mlmc(A, solver, params):
         #dof_size = 8
         #[dof.append(dof_size) for i in range(max_nr_levels-1)]
 
-        dof = [2,2,4,16,32]
+        dof = [2,2,2,16,32]
         #dof = [12,80]
         #dof = [2,2,2]
 
@@ -401,7 +402,7 @@ def mlmc(A, solver, params):
     Bx2inv = np.linalg.inv(Bx2)
     Bx2invproj = Cx1*Bx2inv*Dx1
     diffxinv = Bx1inv - Bx2invproj
-    diffxinv = diffxinv+diffxinv.transpose()
+    #diffxinv = diffxinv+diffxinv.transpose()
     offdiag_fro_norm = npnorm( diffxinv-np.diag(np.diag(diffxinv)), ord='fro' )
     print("\nTheoretical estimation of variance, diff : "+str(offdiag_fro_norm*offdiag_fro_norm))
 
@@ -414,8 +415,8 @@ def mlmc(A, solver, params):
 
     #Ax = A.todense()
     #Axinv = np.linalg.inv(Ax)
-    Bx1inv1 = Bx1inv+Bx1inv.transpose()
-    offdiag_fro_norm = npnorm( Bx1inv1-np.diag(np.diag(Bx1inv1)), ord='fro' )
+    #Bx1inv = Bx1inv+Bx1inv.transpose()
+    offdiag_fro_norm = npnorm( Bx1inv-np.diag(np.diag(Bx1inv)), ord='fro' )
     print("\nTheoretical estimation of variance, pure : "+str(offdiag_fro_norm*offdiag_fro_norm))
 
     #try:
@@ -434,16 +435,16 @@ def mlmc(A, solver, params):
     ml_solvers = list()
     #for i in range(nr_levels-1):
     for i in range(nr_levels-1):
-        mlx = pyamg.smoothed_aggregation_solver(ml.levels[i].A)
+        #mlx = pyamg.smoothed_aggregation_solver(ml.levels[i].A)
         #[mlx, work] = adaptive_sa_solver(ml.levels[i].A, num_candidates=5, improvement_iters=5)
         #[mlx, work] = adaptive_sa_solver(ml.levels[i].A, num_candidates=2, candidate_iters=2, improvement_iters=3,
         #                                 strength='symmetric', aggregate='standard', max_levels=max_nr_levels-i)
-        #[mlx, work] = adaptive_sa_solver(ml.levels[i].A, num_candidates=2, candidate_iters=2, improvement_iters=3,
-        #                                 strength='symmetric', aggregate='standard', max_levels=9)
+        [mlx, work] = adaptive_sa_solver(ml.levels[i].A, num_candidates=2, candidate_iters=2, improvement_iters=3,
+                                         strength='symmetric', aggregate='standard', max_levels=9)
         ml_solvers.append(mlx)
     print("... done")
 
-    solver_tol = 1e-12
+    solver_tol = 1e-5
 
     print("\nComputing rough estimation of the trace ...")
     np.random.seed(123456)
@@ -509,11 +510,11 @@ def mlmc(A, solver, params):
         output_params['results'][i]['level_complexity'] = 0.0
 
     # compute level differences
-    level_trace_tol  = abs(trace_tol*rough_trace/sqrt(nr_levels))
+    level_trace_tol  = abs(trace_tol*rough_trace/sqrt(nr_levels-1))
     level_solver_tol = level_trace_tol/N
 
     #level_solver_tol = 1e-9/sqrt(nr_levels)
-    level_solver_tol = 1e-12
+    level_solver_tol = 1e-5
 
     print("")
 
@@ -706,6 +707,7 @@ def mlmc(A, solver, params):
     for i in range(nr_levels-1):
         #output_params['results'][i]['level_complexity'] += output_params['results'][i]['solver_iters']*ml_solvers[i].cycle_complexity()
         slvr = ml_solvers[i]
+        #print( "flops/cycle = "+str(flopsV(len(slvr.levels), slvr.levels, 0)) )
         output_params['results'][i]['level_complexity'] = output_params['results'][i]['solver_iters']*flopsV(len(slvr.levels), slvr.levels, 0)
 
     output_params['results'][nr_levels-1]['level_complexity'] = output_params['results'][i]['solver_iters']*(ml.levels[nr_levels-1].A.shape[0]*ml.levels[nr_levels-1].A.shape[0])
