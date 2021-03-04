@@ -82,12 +82,14 @@ def loadMatrix(matrix_name, params):
             return (A,None)
 
         # Schwinger, 16^2
-        m = -0.8940
+        #m = -0.8940
 
         # Schwinger, 128^2
         #m = -0.12750
-        #m = -0.13750
+
+        m = -0.13750
         #m = -0.13250
+        #m = 0.0
 
         # get filename and load
         if not filename[0]=='mat':
