@@ -47,8 +47,8 @@ def set_params(example_name):
         params['matrix'] = 'spd_Erdos971.mat'
         matrix_params['problem_name'] = 'graph'
         matrix_params['a1'] = 1.0
-        #matrix_params['a2'] = -1.0/(N*N - 1.0)
-        matrix_params['a2'] = -0.065
+        matrix_params['a2'] = -1.0/(N*N - 1.0)
+        #matrix_params['a2'] = -0.065
         #matrix_params['problem_name'] = 'diffusion2D'
         params['trace_tol'] = 0.3e-1
         params['trace_use_Q'] = False
