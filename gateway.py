@@ -20,7 +20,7 @@ def set_params(example_name):
         matrix_params['N'] = 64
         params['matrix'] = '2dlaplace'
         matrix_params['problem_name'] = '2dlaplace'
-        params['trace_tol'] = 0.1e-1
+        params['trace_tol'] = 1.0e-2
         params['trace_use_Q'] = False
         params['trace_multilevel_construction'] = 'pyamg'
         params['max_nr_levels'] = 3
@@ -61,6 +61,28 @@ def set_params(example_name):
 
         return params
 
+    elif example_name=='schwinger128':
+
+        np.random.seed(51234)
+
+        params = dict()
+        matrix_params = dict()
+
+        # to modify
+        matrix_params['N'] = 128
+        params['matrix'] = 'mat_schwinger128x128b3phasenum11000.mat'
+        matrix_params['problem_name'] = 'schwinger'
+        params['trace_tol'] = 1.0e-2
+        params['trace_use_Q'] = True
+        params['trace_multilevel_construction'] = 'manual_aggregation'
+        params['max_nr_levels'] = 3
+        params['nr_deflat_vctrs'] = 2
+
+        # fixed parameters
+        params['matrix_params'] = matrix_params
+
+        return params
+
 # -------------------------------------------------------------
 
 
@@ -80,7 +102,7 @@ def G101():
     matrix_params['N'] = 16
     params['matrix'] = 'mat_schwinger16x16b3phasenum11000.mat'
     matrix_params['problem_name'] = 'schwinger'
-    params['trace_tol'] = 0.3e-1
+    params['trace_tol'] = 2.5e-1
     params['trace_use_Q'] = True
     params['trace_multilevel_construction'] = 'manual_aggregation'
     params['max_nr_levels'] = 3
@@ -90,6 +112,7 @@ def G101():
     params['solver'] = 'gmres'
     params['solver_tol'] = 1e-3
     params['solver_lambda_min'] = 1e-2
+    params['aggregation_type'] = 'XX'
 
     EXAMPLE_002(params)
 
@@ -99,25 +122,12 @@ def G102():
 
     # this example computes the chosen matrix via MLMC
 
-    np.random.seed(51234)
+    params = set_params('schwinger128')
 
-    params = dict()
-    matrix_params = dict()
-
-    # to modify
-    matrix_params['N'] = 128
-    params['matrix'] = 'mat_schwinger128x128b3phasenum11000.mat'
-    matrix_params['problem_name'] = 'schwinger'
-    params['trace_tol'] = 0.3e-1
-    params['trace_use_Q'] = True
-    params['trace_multilevel_construction'] = 'manual_aggregation'
-    params['max_nr_levels'] = 3
-
-    # fixed parameters
-    params['matrix_params'] = matrix_params
     params['solver'] = 'gmres'
     params['solver_tol'] = 1e-3
     params['solver_lambda_min'] = 1e-2
+    params['aggregation_type'] = 'XX'
 
     EXAMPLE_002(params)
 
@@ -290,7 +300,7 @@ def G201():
     matrix_params['N'] = 16
     params['matrix'] = 'mat_schwinger16x16b3phasenum11000.mat'
     matrix_params['problem_name'] = 'schwinger'
-    params['trace_tol'] = 0.3e-1
+    params['trace_tol'] = 2.5e-1
     params['nr_deflat_vctrs'] = 2
     params['trace_use_Q'] = True
 
@@ -308,21 +318,8 @@ def G202():
 
     # this example computes the chosen matrix via deflated Hutchinson
 
-    np.random.seed(51234)
+    params = set_params('schwinger128')
 
-    params = dict()
-    matrix_params = dict()
-
-    # to modify
-    matrix_params['N'] = 128
-    params['matrix'] = 'mat_schwinger128x128b3phasenum11000.mat'
-    matrix_params['problem_name'] = 'schwinger'
-    params['trace_tol'] = 0.3e-1
-    params['nr_deflat_vctrs'] = 2
-    params['trace_use_Q'] = True
-
-    # fixed parameters
-    params['matrix_params'] = matrix_params
     params['solver'] = 'mg'
     params['solver_tol'] = 1e-3
     params['max_nr_levels'] = 4

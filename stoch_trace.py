@@ -85,6 +85,8 @@ def write_png(A, filename):
 # compute tr(A^{-1}) via Hutchinson
 def hutchinson(A, solver, params):
 
+    print( np.trace( np.linalg.inv( A.todense() ) ) )
+
     # TODO : check input params !
 
     max_nr_levels = params['max_nr_levels']
@@ -131,7 +133,7 @@ def hutchinson(A, solver, params):
     print("... done")
 
     # compute low-rank part of deflation
-    small_A = np.dot(Vx.transpose().conjugate(),Ux) * Sx
+    small_A = np.dot(Vx.transpose().conjugate(),Ux) * np.linalg.inv(Sx)
     tr1 = np.trace(small_A)
 
     np.random.seed(123456)
@@ -560,10 +562,8 @@ def mlmc(A, solver, params):
         # more deflation vectors for the coarsest level
         nr_deflat_vctrs = 16
 
-        print(Acc.shape)
-
-        if nr_deflat_vctrs>(Acc.shape[0]-1) : nr_deflat_vctrs=Acc.shape[0]-1
-        print("Computing SVD (finest level) ...")
+        if nr_deflat_vctrs>(Acc.shape[0]-2) : nr_deflat_vctrs=Acc.shape[0]-2
+        print("Computing SVD (coarsest level) ...")
         if use_Q:
             Sy,Ux = eigsh( Qcc,k=nr_deflat_vctrs,which='LM',tol=1.0e-5,sigma=0.0 )
             Vx = np.copy(Ux)
@@ -580,7 +580,10 @@ def mlmc(A, solver, params):
         print("... done")
 
         # compute low-rank part of deflation
-        small_A = np.dot(Vx.transpose().conjugate(),Ux) * Sx
+        small_A1 = cummP*Ux
+        small_A2 = cummR*small_A1
+        small_A3 = np.dot(Vx.transpose().conjugate(),small_A2)
+        small_A = small_A3*np.linalg.inv(Sx)
         tr1c = np.trace(small_A)
 
         # -------------------------
@@ -644,7 +647,9 @@ def mlmc(A, solver, params):
         #print( "flops/cycle = "+str(flopsV(len(slvr.levels), slvr.levels, 0)) )
         output_params['results'][i]['level_complexity'] = output_params['results'][i]['solver_iters']*flopsV(len(slvr.levels), slvr.levels, 0)
 
-    output_params['results'][nr_levels-1]['level_complexity'] = output_params['results'][i]['solver_iters']*(ml.levels[nr_levels-1].A.shape[0]*ml.levels[nr_levels-1].A.shape[0])
+    output_params['results'][nr_levels-1]['level_complexity'] = output_params['results'][nr_levels-1]['solver_iters']*(ml.levels[nr_levels-1].A.shape[0]*ml.levels[nr_levels-1].A.shape[0])
+
+    #print( output_params['results'][nr_levels-1]['solver_iters'] * (ml.levels[nr_levels-1].A.shape[0]*ml.levels[nr_levels-1].A.shape[0]) )
 
     for i in range(nr_levels):
         output_params['total_complexity'] += output_params['results'][i]['level_complexity']
