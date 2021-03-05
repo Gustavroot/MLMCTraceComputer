@@ -53,7 +53,9 @@ def loadMatrix(matrix_name, params):
         Axx = mat_contents['Problem']['A'][0,0]
         Ax = csr_matrix(Axx)
 
-        A = params['a1']*identity(Ax.shape[0],dtype=Ax.dtype) + params['a2']*Ax
+        #A = params['a1']*identity(Ax.shape[0],dtype=Ax.dtype) + params['a2']*Ax
+        N = Ax.shape[0]
+        A = params['a1']*identity(Ax.shape[0],dtype=Ax.dtype) + ( -(1.0/(N*N-1.0)) ) *Ax
 
         #plt.spy(A)
         #plt.show()

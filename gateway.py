@@ -42,12 +42,13 @@ def set_params(example_name):
 
         # with G the matrix from Suite Sparse, then, we are computing
         # here tr(A^{-1}) with A = a1*I + a2*G
-        N = 472
-        matrix_params['N'] = N
+        #N = 472
+        matrix_params['N'] = 0
         params['matrix'] = 'spd_Erdos971.mat'
         matrix_params['problem_name'] = 'graph'
         matrix_params['a1'] = 1.0
-        matrix_params['a2'] = -1.0/(N*N - 1.0)
+        #matrix_params['a2'] = -1.0/(N*N - 1.0)
+        matrix_params['a2'] = 1.0
         #matrix_params['a2'] = -0.065
         #matrix_params['problem_name'] = 'diffusion2D'
         params['trace_tol'] = 0.3e-1
