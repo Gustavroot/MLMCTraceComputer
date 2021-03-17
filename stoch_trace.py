@@ -2,7 +2,7 @@
 
 import numpy as np
 import scipy as sp
-from solver import solver_sparse
+from function import function_sparse
 from math import sqrt, pow
 import pyamg
 from utils import flopsV
@@ -11,11 +11,15 @@ from aggregation import manual_aggregation
 from scipy.sparse import csr_matrix
 from numpy.linalg import norm as npnorm
 from scipy.sparse.linalg import norm
-import png
+#import png
 from numpy.linalg import eigh
 from scipy.sparse import identity
 
-from scipy.sparse.linalg import svds,eigsh
+from scipy.sparse.linalg import svds,eigsh,eigs
+from scipy.sparse import diags
+
+import time
+import os
 
 
 # ---------------------------------
@@ -41,9 +45,8 @@ def gamma3_application(v):
     v[v_size:] = -v[v_size:]
     return v
 
-def gamma5_application(v,l):
+def gamma5_application(v,l,dof):
 
-    dof = [12,160]
     sz = v.shape[0]
     for i in range(int(sz/dof[l])):
         # negate first half
@@ -52,6 +55,7 @@ def gamma5_application(v,l):
 
     return v
 
+"""
 # https://stackoverflow.com/questions/33713221/create-png-image-from-sparse-data
 def write_png(A, filename):
     m, n = A.shape
@@ -79,19 +83,22 @@ def write_png(A, filename):
         w.write(f, RowIterator(A))
 
     return
+"""
+
 
 # ---------------------------------
 
 # compute tr(A^{-1}) via Hutchinson
-def hutchinson(A, solver, params):
+def hutchinson(A, function, params):
 
     # TODO : check input params !
 
     max_nr_levels = params['max_nr_levels']
 
-    # solver params
-    solver_name = params['solver_params']['name']
-    solver_tol = params['solver_params']['tol']
+    # function params
+    function_name = params['function_params']['function_name']
+    spec_name = params['function_params']['spec_name']
+    function_tol = params['function_params']['tol']
 
     # trace params
     trace_tol = params['tol']
@@ -102,7 +109,7 @@ def hutchinson(A, solver, params):
     # size of the problem
     N = A.shape[0]
 
-    solver_tol = 1e-5
+    function_tol = 1e-5
 
     if use_Q:
         print("Constructing sparse Q ...")
@@ -114,30 +121,57 @@ def hutchinson(A, solver, params):
     # compute the SVD (for low-rank part of deflation)
     np.random.seed(65432)
     nr_deflat_vctrs = params['nr_deflat_vctrs']
+
+    if params['accuracy_eigvs'] == 'low':
+        tolx = tol=1.0e-1
+        ncvx = nr_deflat_vctrs+2
+    elif params['accuracy_eigvs'] == 'high':
+        tolx = tol=1.0e-5
+        ncvx = None
+    else:
+        raise Exception("<accuracy_eigvs> does not have a possible value.")
+
     print("Computing SVD (finest level) ...")
+    start = time.time()
     if use_Q:
-        Sy,Ux = eigsh( Q,k=nr_deflat_vctrs,which='LM',tol=1.0e-5,sigma=0.0 )
+        #Sy,Ux = eigsh( Q,k=nr_deflat_vctrs,which='LM',tol=tolx,sigma=0.0,ncv=ncvx )
+
+        #Sy,Ux = eigsh( Q,k=nr_deflat_vctrs,which='LM',tol=tolx,sigma=0.0 )
+
+        Sy,Ux = eigsh( Q,k=nr_deflat_vctrs,which='SM',tol=tolx )
+
         Vx = np.copy(Ux)
     else:
         diffA = A-A.getH()
         diffA_norm = norm( diffA,ord='fro' )
         if diffA_norm<1.0e-14:
-            Sy,Ux = eigsh( A,k=nr_deflat_vctrs,which='LM',tol=1.0e-5,sigma=0.0 )
+            #Sy,Ux = eigsh( A,k=nr_deflat_vctrs,which='LM',tol=tolx,sigma=0.0,ncv=ncvx )
+            Sy,Ux = eigsh( A,k=nr_deflat_vctrs,which='SM',tol=tolx )
             Vx = np.copy(Ux)
         else:
-            Ux,Sy,Vy = svds(A, k=nr_deflat_vctrs, which='SM', tol=1.0e-5)
+            Ux,Sy,Vy = svds( A,k=nr_deflat_vctrs,which='SM',tol=tolx )
             Vx = Vy.transpose().conjugate()
     Sx = np.diag(Sy)
+    end = time.time()
     print("... done")
+    print("elapsed time = "+str(end-start))
+    try:
+        nr_cores = int(os.getenv('OMP_NUM_THREADS'))
+        print("IMPORTANT : this SVD decomposition was computed with "+str(nr_cores)+" cores i.e. elapsed time = "+str((end-start)*nr_cores)+" cpu seconds")
+    except TypeError:
+        raise Exception("Run : << export OMP_NUM_THREADS=32 >>")
+    #print("... done (elapsed time = "+str(end-start)+")")
 
     # compute low-rank part of deflation
-    small_A = np.dot(Vx.transpose().conjugate(),Ux) * np.linalg.inv(Sx)
-    tr1 = np.trace(small_A)
+    # FIXME : re-add this code
+    #small_A = np.dot(Vx.transpose().conjugate(),Ux) * np.linalg.inv(Sx)
+    #tr1 = np.trace(small_A)
+    tr1 = 0.0
 
     np.random.seed(123456)
 
     # pre-compute a rough estimation of the trace, to set then a tolerance
-    nr_rough_iters = 10
+    nr_rough_iters = 5
     ests = np.zeros(nr_rough_iters, dtype=A.dtype)
     # main Hutchinson loop
     for i in range(nr_rough_iters):
@@ -158,15 +192,15 @@ def hutchinson(A, solver, params):
             if params['problem_name']=='schwinger':
                 x = gamma3_application(x)
             elif params['problem_name']=='LQCD':
-                x = gamma5_application(x,0)
+                x = gamma5_application(x,0,params['dof'])
 
-        z,num_iters = solver_sparse(A,x,solver_tol,solver,solver_name)
+        z,num_iters = function_sparse(A,x,function_tol,function,function_name,spec_name)
 
         if use_Q:
             if params['problem_name']=='schwinger':
                 x = gamma3_application(x)
             elif params['problem_name']=='LQCD':
-                x = gamma5_application(x,0)
+                x = gamma5_application(x,0,params['dof'])
 
         e = np.vdot(x,z)
         ests[i] = e
@@ -181,9 +215,9 @@ def hutchinson(A, solver, params):
     #rough_solver_tol = rough_trace_tol*lambda_min/N
     #rough_solver_tol = abs(rough_trace_tol/N)
 
-    rough_solver_tol = 1e-5
+    rough_function_tol = 1e-5
 
-    solver_iters = 0
+    function_iters = 0
     ests = np.zeros(trace_max_nr_ests, dtype=A.dtype)
     # main Hutchinson loop
     for i in range(trace_max_nr_ests):
@@ -198,20 +232,23 @@ def hutchinson(A, solver, params):
         #x = np.where(x==3, -1j, x)
         #x = np.where(x==5, 1j, x)
 
-        x = x.astype(A.dtype)
+        # FIXME : re-add this code
+        #x = x.astype(A.dtype)
+        x_def = x.astype(A.dtype)
 
         # deflating Vx from x
-        x_def = x - np.dot(Vx,np.dot(Vx.transpose().conjugate(),x))
+        # FIXME : re-add this code
+        #x_def = x - np.dot(Vx,np.dot(Vx.transpose().conjugate(),x))
 
         if use_Q:
             if params['problem_name']=='schwinger':
                 x_def = gamma3_application(x_def)
             elif params['problem_name']=='LQCD':
-                x_def = gamma5_application(x_def,0)
+                x_def = gamma5_application(x_def,0,params['dof'])
 
-        z,num_iters = solver_sparse(A,x_def,rough_solver_tol,solver,solver_name)
+        z,num_iters = function_sparse(A,x_def,rough_function_tol,function,function_name,spec_name)
 
-        solver_iters += num_iters
+        function_iters += num_iters
 
         e = np.vdot(x,z)
 
@@ -226,16 +263,16 @@ def hutchinson(A, solver, params):
         print(str(i)+" .. "+str(ests_avg)+" .. "+str(rough_trace)+" .. "+str(error_est)+" .. "+str(rough_trace_tol)+" .. "+str(num_iters))
 
         # break condition
-        if i>10 and error_est<rough_trace_tol:
+        if i>=5 and error_est<rough_trace_tol:
             break
 
     result = dict()
     result['trace'] = ests_avg+tr1
     result['std_dev'] = ests_dev
     result['nr_ests'] = i
-    result['solver_iters'] = solver_iters
-    if solver_name=='mg':
-        result['total_complexity'] = flopsV(len(solver.levels), solver.levels, 0)*solver_iters
+    result['function_iters'] = function_iters
+    if function_name=='mg':
+        result['total_complexity'] = flopsV(len(function.levels), function.levels, 0)*function_iters
 
     return result
 
@@ -263,13 +300,15 @@ def mlmc(A, solver, params):
     max_nr_levels = params['max_nr_levels']
 
     print("\nConstruction of P and A at all levels (from finest level) ...")
-
+    start = time.time()
     if trace_ml_constr=='pyamg':
         if params['aggregation_type']=='SA':
             ml = pyamg.smoothed_aggregation_solver( A,max_levels=max_nr_levels )
         elif params['aggregation_type']=='ASA':
             [ml, work] = adaptive_sa_solver(A, num_candidates=2, candidate_iters=2, improvement_iters=3,
                                             strength='symmetric', aggregate='standard', max_levels=max_nr_levels)
+        else:
+            raise Exception("Aggregation type not specified for PyAMG")
         #[ml, work] = adaptive_sa_solver(A, num_candidates=5, improvement_iters=5)
 
     # specific to Schwinger
@@ -278,10 +317,12 @@ def mlmc(A, solver, params):
         # TODO : get <aggr_size> from input params
         # TODO : get <dof_size> from input params
 
-        aggrs = [2*2,8*8]
-        dof = [2,2,6,2,2,2]
+        aggrs = params['aggrs']
+        dof = params['dof']
 
-        ml = manual_aggregation(A, dof=dof, aggrs=aggrs, max_levels=max_nr_levels, dim=2)
+        # 128 ---> 64 ---> 8 ---> 2
+
+        ml = manual_aggregation(A, dof=dof, aggrs=aggrs, max_levels=max_nr_levels, dim=2, acc_eigvs=params['accuracy_eigvs'], sys_type=params['problem_name'])
 
     # specific to LQCD
     elif trace_ml_constr=='from_files':
@@ -315,8 +356,10 @@ def mlmc(A, solver, params):
 
     else:
         raise Exception("The specified <trace_multilevel_constructor> does not exist.")
-
+    end = time.time()
     print("... done")
+    print("elapsed time = "+str(end-start))
+    print("IMPORTANT : this ML hierarchy was computed with 1 core i.e. elapsed time = "+str(end-start)+" cpu seconds")
 
     print("\nMultilevel information:")
     print(ml)
@@ -338,7 +381,7 @@ def mlmc(A, solver, params):
 
     ml_solvers = list()
     for i in range(nr_levels-1):
-        [mlx, work] = adaptive_sa_solver(ml.levels[i].A, num_candidates=2, candidate_iters=2, improvement_iters=3,
+        [mlx, work] = adaptive_sa_solver(ml.levels[i].A, num_candidates=2, candidate_iters=5, improvement_iters=8,
                                          strength='symmetric', aggregate='standard', max_levels=9)
         ml_solvers.append(mlx)
 
@@ -351,7 +394,7 @@ def mlmc(A, solver, params):
     np.random.seed(123456)
 
     # pre-compute a rough estimate of the trace, to set then a tolerance
-    nr_rough_iters = 10
+    nr_rough_iters = 5
     ests = np.zeros(nr_rough_iters, dtype=A.dtype)
     # main Hutchinson loop
     for i in range(nr_rough_iters):
@@ -372,15 +415,17 @@ def mlmc(A, solver, params):
             if params['problem_name']=='schwinger':
                 x = gamma3_application(x)
             elif params['problem_name']=='LQCD':
-                x = gamma5_application(x,0)
+                x = gamma5_application(x,0,params['dof'])
 
         z,num_iters = solver_sparse(A,x,solver_tol,ml_solvers[0],"mg")
+
+        print(num_iters)
 
         if use_Q:
             if params['problem_name']=='schwinger':
                 x = gamma3_application(x)
             elif params['problem_name']=='LQCD':
-                x = gamma5_application(x,0)
+                x = gamma5_application(x,0,params['dof'])
 
         e = np.vdot(x,z)
         ests[i] = e
@@ -414,8 +459,8 @@ def mlmc(A, solver, params):
 
     print("")
 
-    tol_fraction0 = 0.45
-    tol_fraction1 = 0.45
+    tol_fraction0 = 0.35 # = 0.65/8.0
+    tol_fraction1 = 0.55 # = 0.28*5.0
 
     cummP = sp.sparse.identity(N)
     cummR = sp.sparse.identity(N)
@@ -431,7 +476,11 @@ def mlmc(A, solver, params):
         if i==0 : tol_fctr = sqrt(tol_fraction0)
         elif i==1 : tol_fctr = sqrt(tol_fraction1)
         # e.g. sqrt(0.45), sqrt(0.45), sqrt(0.1*(1.0/(nl-2)))
-        else : tol_fctr = sqrt(1.0-tol_fraction0-tol_fraction1)/sqrt(nr_levels-2)
+        else :
+            if params['coarsest_level_directly']==True:
+                tol_fctr = sqrt(1.0-tol_fraction0-tol_fraction1)/sqrt(nr_levels-3)
+            else:
+                tol_fctr = sqrt(1.0-tol_fraction0-tol_fraction1)/sqrt(nr_levels-2)
 
         level_trace_tol  = abs(trace_tol*rough_trace*tol_fctr)
 
@@ -465,7 +514,7 @@ def mlmc(A, solver, params):
                 if params['problem_name']=='schwinger':
                     x = gamma3_application(x)
                 elif params['problem_name']=='LQCD':
-                    x = gamma5_application(x,i)
+                    x = gamma5_application(x,i,params['dof'])
 
             z,num_iters = solver_sparse(Af,x,level_solver_tol,ml_solvers[i],"mg")
 
@@ -476,7 +525,7 @@ def mlmc(A, solver, params):
                 if params['problem_name']=='schwinger':
                     x = gamma3_application(x)
                 elif params['problem_name']=='LQCD':
-                    x = gamma5_application(x,i)
+                    x = gamma5_application(x,i,params['dof'])
 
             xc = R*x
 
@@ -484,7 +533,7 @@ def mlmc(A, solver, params):
                 if params['problem_name']=='schwinger':
                     xc = gamma3_application(xc)
                 elif params['problem_name']=='LQCD':
-                    xc = gamma5_application(xc,i+1)
+                    xc = gamma5_application(xc,i+1,params['dof'])
 
             if (i+1)==(nr_levels-1):
                 # solve directly
@@ -512,7 +561,7 @@ def mlmc(A, solver, params):
             print(str(j)+" .. "+str(ests_avg)+" .. "+str(error_est)+" .. "+str(level_trace_tol))
 
             # break condition
-            if j>10 and error_est<level_trace_tol:
+            if j>=5 and error_est<level_trace_tol:
                 break
 
         # cummulative R and P
@@ -541,103 +590,122 @@ def mlmc(A, solver, params):
 
     else:
 
-        ests = np.zeros(trace_max_nr_ests, dtype=Acc.dtype)
+        if params['coarsest_level_directly']==True:
 
-        tol_fctr = sqrt(1.0-tol_fraction0-tol_fraction1)/sqrt(nr_levels-2)
-        level_trace_tol  = abs(trace_tol*rough_trace*tol_fctr)
-
-        # ----- extracting eigenvectors for deflation
-
-        if use_Q:
-            print("Constructing sparse Q ...")
-            Qcc = Acc.copy()
-            mat_size = int(Qcc.shape[0]/2)
-            Qcc[mat_size:,:] = -Qcc[mat_size:,:]
-            print("... done")
-
-        # compute the SVD (for low-rank part of deflation)
-        np.random.seed(65432)
-        # more deflation vectors for the coarsest level
-        nr_deflat_vctrs = 16
-
-        if nr_deflat_vctrs>(Acc.shape[0]-2) : nr_deflat_vctrs=Acc.shape[0]-2
-        print("Computing SVD (coarsest level) ...")
-        if use_Q:
-            Sy,Ux = eigsh( Qcc,k=nr_deflat_vctrs,which='LM',tol=1.0e-5,sigma=0.0 )
-            Vx = np.copy(Ux)
-        else:
-            diffA = Acc-Acc.getH()
-            diffA_norm = norm( diffA,ord='fro' )
-            if diffA_norm<1.0e-14:
-                Sy,Ux = eigsh( Acc,k=nr_deflat_vctrs,which='LM',tol=1.0e-5,sigma=0.0 )
-                Vx = np.copy(Ux)
-            else:
-                Ux,Sy,Vy = svds(Acc, k=nr_deflat_vctrs, which='SM', tol=1.0e-5)
-                Vx = Vy.transpose().conjugate()
-        Sx = np.diag(Sy)
-        print("... done")
-
-        # compute low-rank part of deflation
-        small_A1 = cummP*Ux
-        small_A2 = cummR*small_A1
-        small_A3 = np.dot(Vx.transpose().conjugate(),small_A2)
-        small_A = small_A3*np.linalg.inv(Sx)
-        tr1c = np.trace(small_A)
-
-        # -------------------------
-
-        for i in range(trace_max_nr_ests):
-
-            # generate a Rademacher vector
-
-            xc = np.random.randint(2, size=Ncc)
-            xc *= 2
-            xc -= 1
-            #x = np.random.randint(4, size=N)
-            #x *= 2
-            #x -= 1
-            #x = np.where(x==3, -1j, x)
-            #x = np.where(x==5, 1j, x)
-
-            xc = xc.astype(A.dtype)
-
-            x1 = cummP*xc
-            x2 = cummR*x1
-
-            # deflating Vx from x2
-            x2_def = x2 - np.dot(Vx,np.dot(Vx.transpose().conjugate(),x2))
+            output_params['results'][nr_levels-1]['nr_ests'] += 1
+            # set trace and standard deviation
 
             if use_Q:
-                if params['problem_name']=='schwinger':
-                    x2_def = gamma3_application(x2_def)
-                elif params['problem_name']=='LQCD':
-                    x2_def = gamma5_application(x2_def,nr_levels-1)
+                print("Constructing sparse Q ...")
+                Qcc = Acc.copy()
+                mat_size = int(Qcc.shape[0]/2)
+                Qcc[mat_size:,:] = -Qcc[mat_size:,:]
+                print("... done")
+                output_params['results'][nr_levels-1]['ests_avg'] = np.trace(np.linalg.inv( Qcc.todense() ))
+            else:
+                output_params['results'][nr_levels-1]['ests_avg'] = np.trace(cummR*cummP*np_Acc_inv)
 
-            #y,num_iters = solver_sparse(Ac,x2,level_solver_tol,ml_solvers[nr_levels-1],"mg")
-            y = np.dot(np_Acc_inv,x2_def)
-            y = np.asarray(y).reshape(-1)
-            num_iters = 1
+            output_params['results'][nr_levels-1]['ests_dev'] = 0
 
-            output_params['results'][nr_levels-1]['solver_iters'] += num_iters
+        else:
 
-            ests[i] = np.vdot(xc,y)
+            ests = np.zeros(trace_max_nr_ests, dtype=Acc.dtype)
 
-            # average of estimates
-            ests_avg = np.sum(ests[0:(i+1)])/(i+1)
-            # and standard deviation
-            ests_dev = sqrt(np.sum(np.square(np.abs(ests[0:(i+1)]-ests_avg)))/(i+1))
-            error_est = ests_dev/sqrt(i+1)
+            tol_fctr = sqrt(1.0-tol_fraction0-tol_fraction1)/sqrt(nr_levels-2)
+            level_trace_tol  = abs(trace_tol*rough_trace*tol_fctr)
 
-            print(str(i)+" .. "+str(ests_avg)+" .. "+str(error_est)+" .. "+str(level_trace_tol))
+            # ----- extracting eigenvectors for deflation
 
-            # break condition
-            if i>10 and error_est<level_trace_tol:
-                break
+            if use_Q:
+                print("Constructing sparse Q ...")
+                Qcc = Acc.copy()
+                mat_size = int(Qcc.shape[0]/2)
+                Qcc[mat_size:,:] = -Qcc[mat_size:,:]
+                print("... done")
 
-        output_params['results'][nr_levels-1]['nr_ests'] += i
-        # set trace and standard deviation
-        output_params['results'][nr_levels-1]['ests_avg'] = ests_avg+tr1c
-        output_params['results'][nr_levels-1]['ests_dev'] = ests_dev
+            # compute the SVD (for low-rank part of deflation)
+            np.random.seed(65432)
+            # more deflation vectors for the coarsest level
+            nr_deflat_vctrs = 16
+
+            if nr_deflat_vctrs>(Acc.shape[0]-2) : nr_deflat_vctrs=Acc.shape[0]-2
+            print("Computing SVD (coarsest level) ...")
+            if use_Q:
+                Sy,Ux = eigsh( Qcc,k=nr_deflat_vctrs,which='LM',tol=1.0e-5,sigma=0.0 )
+                Vx = np.copy(Ux)
+            else:
+                diffA = Acc-Acc.getH()
+                diffA_norm = norm( diffA,ord='fro' )
+                if diffA_norm<1.0e-14:
+                    Sy,Ux = eigsh( Acc,k=nr_deflat_vctrs,which='LM',tol=1.0e-5,sigma=0.0 )
+                    Vx = np.copy(Ux)
+                else:
+                    Ux,Sy,Vy = svds(Acc, k=nr_deflat_vctrs, which='SM', tol=1.0e-5)
+                    Vx = Vy.transpose().conjugate()
+            Sx = np.diag(Sy)
+            print("... done")
+
+            # compute low-rank part of deflation
+            small_A1 = cummP*Ux
+            small_A2 = cummR*small_A1
+            small_A3 = np.dot(Vx.transpose().conjugate(),small_A2)
+            small_A = small_A3*np.linalg.inv(Sx)
+            tr1c = np.trace(small_A)
+
+            # -------------------------
+
+            for i in range(trace_max_nr_ests):
+
+                # generate a Rademacher vector
+
+                xc = np.random.randint(2, size=Ncc)
+                xc *= 2
+                xc -= 1
+                #x = np.random.randint(4, size=N)
+                #x *= 2
+                #x -= 1
+                #x = np.where(x==3, -1j, x)
+                #x = np.where(x==5, 1j, x)
+
+                xc = xc.astype(A.dtype)
+
+                x1 = cummP*xc
+                x2 = cummR*x1
+
+                # deflating Vx from x2
+                x2_def = x2 - np.dot(Vx,np.dot(Vx.transpose().conjugate(),x2))
+
+                if use_Q:
+                    if params['problem_name']=='schwinger':
+                        x2_def = gamma3_application(x2_def)
+                    elif params['problem_name']=='LQCD':
+                        x2_def = gamma5_application(x2_def,nr_levels-1,params['dof'])
+
+                #y,num_iters = solver_sparse(Ac,x2,level_solver_tol,ml_solvers[nr_levels-1],"mg")
+                y = np.dot(np_Acc_inv,x2_def)
+                y = np.asarray(y).reshape(-1)
+                num_iters = 1
+
+                output_params['results'][nr_levels-1]['solver_iters'] += num_iters
+
+                ests[i] = np.vdot(xc,y)
+
+                # average of estimates
+                ests_avg = np.sum(ests[0:(i+1)])/(i+1)
+                # and standard deviation
+                ests_dev = sqrt(np.sum(np.square(np.abs(ests[0:(i+1)]-ests_avg)))/(i+1))
+                error_est = ests_dev/sqrt(i+1)
+
+                print(str(i)+" .. "+str(ests_avg)+" .. "+str(error_est)+" .. "+str(level_trace_tol))
+
+                # break condition
+                if i>=5 and error_est<level_trace_tol:
+                    break
+
+            output_params['results'][nr_levels-1]['nr_ests'] += i
+            # set trace and standard deviation
+            output_params['results'][nr_levels-1]['ests_avg'] = ests_avg+tr1c
+            output_params['results'][nr_levels-1]['ests_dev'] = ests_dev
 
     for i in range(nr_levels-1):
         #output_params['results'][i]['level_complexity'] += output_params['results'][i]['solver_iters']*ml_solvers[i].cycle_complexity()
@@ -645,7 +713,11 @@ def mlmc(A, solver, params):
         #print( "flops/cycle = "+str(flopsV(len(slvr.levels), slvr.levels, 0)) )
         output_params['results'][i]['level_complexity'] = output_params['results'][i]['solver_iters']*flopsV(len(slvr.levels), slvr.levels, 0)
 
-    output_params['results'][nr_levels-1]['level_complexity'] = output_params['results'][nr_levels-1]['solver_iters']*(ml.levels[nr_levels-1].A.shape[0]*ml.levels[nr_levels-1].A.shape[0])
+    if params['coarsest_level_directly']==True:
+        output_params['results'][nr_levels-1]['level_complexity'] = pow(ml.levels[nr_levels-1].A.shape[0],3) + \
+                                                                    output_params['results'][nr_levels-1]['solver_iters']*pow(ml.levels[nr_levels-1].A.shape[0],2)
+    else:
+        output_params['results'][nr_levels-1]['level_complexity'] = output_params['results'][nr_levels-1]['solver_iters']*(ml.levels[nr_levels-1].A.shape[0]*ml.levels[nr_levels-1].A.shape[0])
 
     #print( output_params['results'][nr_levels-1]['solver_iters'] * (ml.levels[nr_levels-1].A.shape[0]*ml.levels[nr_levels-1].A.shape[0]) )
 

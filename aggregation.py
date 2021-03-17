@@ -5,7 +5,7 @@ import numpy as np
 from scipy.sparse import csr_matrix, identity
 from scipy.sparse.linalg import norm
 from numpy.linalg import norm as npnorm
-import png
+#import png
 
 
 
@@ -24,7 +24,7 @@ class SimpleML:
         return "For manual aggregation, printing <ml> is under construction"
 
 
-
+"""
 # https://stackoverflow.com/questions/33713221/create-png-image-from-sparse-data
 def write_png(A, filename):
     m, n = A.shape
@@ -52,6 +52,7 @@ def write_png(A, filename):
         w.write(f, RowIterator(A))
 
     return
+"""
 
 
 
@@ -60,10 +61,10 @@ def write_png(A, filename):
 # <aggrs> : per level, this is the block size. So, if at a certain level the
 #           value is 4, then the aggregates are of size 4^d, where d is the
 #           dimensionality of the physical problem
-def manual_aggregation(A, dof=[2,2,2], aggrs=[2*2,2*2], max_levels=3, dim=2):
+def manual_aggregation(A, dof=[2,2,2], aggrs=[2*2,2*2], max_levels=3, dim=2, acc_eigvs='low', sys_type='schwinger'):
 
     # assuming a (roughly) minimum coarsest-level size for the matrix
-    min_coarsest_size = 8
+    min_coarsest_size = 1
 
     # TODO : check what is the actual maximum number of levels possible. For
     #        now, just assume max_levels is possible
@@ -83,6 +84,7 @@ def manual_aggregation(A, dof=[2,2,2], aggrs=[2*2,2*2], max_levels=3, dim=2):
 
     for i in range(max_levels-1):
 
+        # use Q
         #mat_size = int(Al.shape[0]/2)
         #Al[mat_size:] = -Al[mat_size:]
 
@@ -92,8 +94,45 @@ def manual_aggregation(A, dof=[2,2,2], aggrs=[2*2,2*2], max_levels=3, dim=2):
         print("\teigensolving at level "+str(i)+" ...")
 
         nt = 1
+
+        if acc_eigvs == 'low':
+            tolx = tol=1.0e-1
+            ncvx = nt*dof[i+1]+2
+        elif acc_eigvs == 'high':
+            tolx = tol=1.0e-5
+            ncvx = None
+        else:
+            raise Exception("<accuracy_eigvs> does not have a possible value.")
+
         #eigvals,eig_vecsx = eigsh(Al, k=nt*dof[i+1], which='SM', return_eigenvectors=True, tol=1e-5, maxiter=1000000)
-        eigvals,eig_vecsx = eigs(Al, k=nt*dof[i+1], which='SM', return_eigenvectors=True, tol=1e-5, maxiter=1000000)
+        #eigvals,eig_vecsx = eigs(Al, k=nt*dof[i+1], which='SM', return_eigenvectors=True, tol=1e-2, maxiter=1000000)
+
+
+
+
+
+
+
+
+
+        #eigvals,eig_vecsx = eigsh( Al, k=1, which='SR', tol=tolx, maxiter=1000000 )
+        #print(eigvals)
+        #exit(0)
+
+
+
+
+
+
+
+
+
+        if i<3:
+            eigvals,eig_vecsx = eigs( Al, k=nt*dof[i+1], which='LM', tol=tolx, maxiter=1000000, sigma=0.0, ncv=ncvx )
+            #eigvals,eig_vecsx = eigsh( Al, k=nt*dof[i+1], which='SM', tol=tolx, maxiter=1000000 )
+        else:
+            eigvals,eig_vecsx = eigs( Al, k=nt*dof[i+1], which='LM', tol=1.0e-5, maxiter=1000000, sigma=0.0 )
+            #eigvals,eig_vecsx = eigsh( Al, k=nt*dof[i+1], which='SM', tol=1.0e-5, maxiter=1000000 )
 
         eig_vecs = np.zeros((Al.shape[0],dof[i+1]), dtype=Al.dtype)
 
@@ -107,6 +146,7 @@ def manual_aggregation(A, dof=[2,2,2], aggrs=[2*2,2*2], max_levels=3, dim=2):
 
         print("\t... done")
 
+        # use Q
         #mat_size = int(Al.shape[0]/2)
         #Al[mat_size:] = -Al[mat_size:]
 
@@ -188,19 +228,6 @@ def manual_aggregation(A, dof=[2,2,2], aggrs=[2*2,2*2], max_levels=3, dim=2):
         print("\t... done")
         # ------------------------------------------------------------------------------------
 
-        #Pl2 = csr_matrix(Px, dtype=Px.dtype)
-        #write_png(Pl2,"P2_"+str(i)+".png")
-
-        # check Gamma3-compability here !!
-        P1 = np.copy(Px)
-        mat_size1_half = int(P1.shape[0]/2)
-        P1[mat_size1_half:,:] = -P1[mat_size1_half:,:]
-        P2 = np.copy(Px)
-        mat_size2_half = int(P1.shape[1]/2)
-        P2[:,mat_size2_half:] = -P2[:,mat_size2_half:]
-        diffP = P1-P2
-        print("\tmeasuring g3-compatibility at level "+str(i)+" : "+str( npnorm(diffP,ord='fro') ))
-
         Pl = csr_matrix(Px, dtype=Px.dtype)
 
         ml.levels[i].P = Pl.copy()
@@ -212,16 +239,9 @@ def manual_aggregation(A, dof=[2,2,2], aggrs=[2*2,2*2], max_levels=3, dim=2):
         Rl = Rl.conjugate()
         Rl = Rl.transpose()
 
-        ml.levels[i].R = Rl.copy()
-
         print("\t... done")
 
-        axx = Rl*Pl
-        bxx = identity(Pl.shape[1],dtype=Pl.dtype)
-        cxx = axx-bxx
-        print("\torthonormality of P at level "+str(i)+" = "+str( norm(axx-bxx,ord='fro')) )
-
-        print("\tconstructing A at level "+str(i+1)+" ...")
+        ml.levels[i].R = Rl.copy()
 
         Ax = Rl*Al*Pl
         Al = Ax.copy()
@@ -229,21 +249,43 @@ def manual_aggregation(A, dof=[2,2,2], aggrs=[2*2,2*2], max_levels=3, dim=2):
         ml.levels.append(LevelML())
         ml.levels[i+1].A = Al.copy()
 
-        Ax = Ax.getH()
-        print("\thermiticity of A at level "+str(i+1)+" = "+str( norm(Ax-Al,ord='fro')) )
+        if sys_type=='schwinger':
 
-        mat_size_half = int(Al.shape[0]/2)
-        g3Al = Al.copy()
-        g3Al[mat_size_half:,:] = -g3Al[mat_size_half:,:]
-        g3Ax = g3Al.copy()
-        g3Ax = g3Ax.getH()
-        print("\thermiticity of g3*A at level "+str(i+1)+" = "+str( norm(g3Ax-g3Al,ord='fro')) )
+            #Pl2 = csr_matrix(Px, dtype=Px.dtype)
+            #write_png(Pl2,"P2_"+str(i)+".png")
 
-        print("\t... done")
+            # check Gamma3-compability here !!
+            P1 = np.copy(Px)
+            mat_size1_half = int(P1.shape[0]/2)
+            P1[mat_size1_half:,:] = -P1[mat_size1_half:,:]
+            P2 = np.copy(Px)
+            mat_size2_half = int(P1.shape[1]/2)
+            P2[:,mat_size2_half:] = -P2[:,mat_size2_half:]
+            diffP = P1-P2
+            print("\tmeasuring g3-compatibility at level "+str(i)+" : "+str( npnorm(diffP,ord='fro') ))
+
+            axx = Rl*Pl
+            bxx = identity(Pl.shape[1],dtype=Pl.dtype)
+            cxx = axx-bxx
+            print("\torthonormality of P at level "+str(i)+" = "+str( norm(axx-bxx,ord='fro')) )
+
+            print("\tconstructing A at level "+str(i+1)+" ...")
+
+            Ax = Ax.getH()
+            print("\thermiticity of A at level "+str(i+1)+" = "+str( norm(Ax-Al,ord='fro')) )
+
+            mat_size_half = int(Al.shape[0]/2)
+            g3Al = Al.copy()
+            g3Al[mat_size_half:,:] = -g3Al[mat_size_half:,:]
+            g3Ax = g3Al.copy()
+            g3Ax = g3Ax.getH()
+            print("\thermiticity of g3*A at level "+str(i+1)+" = "+str( norm(g3Ax-g3Al,ord='fro')) )
+
+            print("\t... done")
+
+            if Al.shape[0] <= min_coarsest_size: break
 
         print("")
-
-        if Al.shape[0] <= min_coarsest_size: break
 
     print("\tNonzeros = "+str(Al.count_nonzero()))
     print("\tsize(A) = "+str(Al.shape))
