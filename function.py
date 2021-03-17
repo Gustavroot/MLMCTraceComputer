@@ -165,10 +165,6 @@ def function_sparse(A, b, tol, function, function_name, spec_name):
 
         function.putvalue('v',b)
 
-        #print("Sending A as dense ...")
-        function.putvalue('Ax',A.todense())
-        #print("... done")
-
         #session.putvalue('t',t)
         function.run(mscript)
 

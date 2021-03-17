@@ -18,6 +18,8 @@ from scipy.sparse import identity
 from scipy.sparse.linalg import svds,eigsh,eigs
 from scipy.sparse import diags
 
+from scipy.linalg import expm
+
 import time
 import os
 
@@ -165,8 +167,19 @@ def hutchinson(A, function, params):
     # compute low-rank part of deflation
     # FIXME : re-add this code
     #small_A = np.dot(Vx.transpose().conjugate(),Ux) * np.linalg.inv(Sx)
-    #tr1 = np.trace(small_A)
-    tr1 = 0.0
+    small_A = np.dot(Vx.transpose().conjugate(),Ux) * expm(-Sx)
+    tr1 = np.trace(small_A)
+
+    #print("Sending A as dense ...")
+    function.putvalue('Ax',A.todense())
+    #print("... done")
+
+    # TODO : remove this section
+    #print("Computing theoretical trace ...")
+    #Ax = -A
+    #trx = np.trace( expm(Ax.todense()) )
+    #print("tr(f(A)) = "+str(trx))
+    #print("... done")
 
     np.random.seed(123456)
 
@@ -233,12 +246,12 @@ def hutchinson(A, function, params):
         #x = np.where(x==5, 1j, x)
 
         # FIXME : re-add this code
-        #x = x.astype(A.dtype)
-        x_def = x.astype(A.dtype)
+        x = x.astype(A.dtype)
+        #x_def = x.astype(A.dtype)
 
         # deflating Vx from x
         # FIXME : re-add this code
-        #x_def = x - np.dot(Vx,np.dot(Vx.transpose().conjugate(),x))
+        x_def = x - np.dot(Vx,np.dot(Vx.transpose().conjugate(),x))
 
         if use_Q:
             if params['problem_name']=='schwinger':

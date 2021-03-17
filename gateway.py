@@ -111,18 +111,20 @@ def set_params(example_name):
         # here tr(L^{-1}) with L = a1*I + a2*B
         #N = 472
         matrix_params['N'] = 0
-        params['matrix'] = 'spd_Erdos971.mat'
+        #params['matrix'] = 'spd_G56.mat'
+        #params['matrix'] = 'spd_Erdos02.mat'
+        params['matrix'] = 'spd_USpowerGrid.mat'
         matrix_params['problem_name'] = 'estrada_index'
-        matrix_params['a1'] = 1.05
+        matrix_params['a1'] = 1.01
         #matrix_params['a2'] = -1.0/(N*N - 1.0)
         matrix_params['a2'] = -1.0
         #matrix_params['a2'] = -0.065
         #matrix_params['problem_name'] = 'diffusion2D'
-        params['trace_tol'] = 2.0e-1
+        params['trace_tol'] = 3.0e-3
         params['trace_use_Q'] = False
         params['trace_multilevel_construction'] = 'pyamg'
         params['max_nr_levels'] = 3
-        params['nr_deflat_vctrs'] = 2
+        params['nr_deflat_vctrs'] = 64
 
         params['coarsest_level_directly'] = True
         params['accuracy_eigvs'] = 'high'
