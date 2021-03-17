@@ -164,8 +164,11 @@ def hutchinson(A, function, params):
         raise Exception("Run : << export OMP_NUM_THREADS=32 >>")
     #print("... done (elapsed time = "+str(end-start)+")")
 
+    # tr( A ) = tr(U1H*U1* S1 ) + tr( A *(I-U1*U1H))
+    # tr( exp(-L) ) = tr(U1H*U1* exp(-S1) ) + tr( exp(-L) *(I-U1*U1H))
+    # tr( exp(-L) *(I-U1*U1H)) = (1/n)sum^{n} ( ziH * EXPOFIT( -L,(I-U1*U1H)*zi ) )
+
     # compute low-rank part of deflation
-    # FIXME : re-add this code
     #small_A = np.dot(Vx.transpose().conjugate(),Ux) * np.linalg.inv(Sx)
     small_A = np.dot(Vx.transpose().conjugate(),Ux) * expm(-Sx)
     tr1 = np.trace(small_A)
@@ -175,11 +178,11 @@ def hutchinson(A, function, params):
     #print("... done")
 
     # TODO : remove this section
-    #print("Computing theoretical trace ...")
-    #Ax = -A
-    #trx = np.trace( expm(Ax.todense()) )
-    #print("tr(f(A)) = "+str(trx))
-    #print("... done")
+    print("Computing theoretical trace ...")
+    Ax = -A
+    trx = np.trace( expm(Ax.todense()) )
+    print("tr(f(A)) = "+str(trx))
+    print("... done")
 
     np.random.seed(123456)
 
@@ -245,12 +248,9 @@ def hutchinson(A, function, params):
         #x = np.where(x==3, -1j, x)
         #x = np.where(x==5, 1j, x)
 
-        # FIXME : re-add this code
         x = x.astype(A.dtype)
-        #x_def = x.astype(A.dtype)
 
         # deflating Vx from x
-        # FIXME : re-add this code
         x_def = x - np.dot(Vx,np.dot(Vx.transpose().conjugate(),x))
 
         if use_Q:

@@ -124,6 +124,7 @@ def set_params(example_name):
         params['trace_use_Q'] = False
         params['trace_multilevel_construction'] = 'pyamg'
         params['max_nr_levels'] = 3
+        # this parameter is changed to compare against MLMC , nr_defl = 2,32,128
         params['nr_deflat_vctrs'] = 64
 
         params['coarsest_level_directly'] = True
