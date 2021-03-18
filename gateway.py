@@ -17,20 +17,23 @@ def set_params(example_name):
         matrix_params = dict()
 
         # to modify
-        matrix_params['N'] = 128
+        matrix_params['N'] = 32
         params['matrix'] = '2dlaplace'
         matrix_params['problem_name'] = '2dlaplace'
-        params['trace_tol'] = 1.0e-3
+        params['trace_tol'] = 0.2e-2
         params['trace_use_Q'] = False
         params['trace_multilevel_construction'] = 'pyamg'
-        params['max_nr_levels'] = 4
-        params['nr_deflat_vctrs'] = 8
+        params['max_nr_levels'] = 3
+        params['nr_deflat_vctrs'] = 0
 
         params['coarsest_level_directly'] = True
         params['accuracy_eigvs'] = 'high'
 
         params['aggrs'] = None
         params['dof'] = None
+
+        #params['function'] = 'inverse'
+        params['function'] = 'exponential'
 
         # fixed parameters
         params['matrix_params'] = matrix_params
@@ -114,24 +117,30 @@ def set_params(example_name):
         #params['matrix'] = 'spd_G56.mat'
         #params['matrix'] = 'spd_Erdos02.mat'
         params['matrix'] = 'spd_USpowerGrid.mat'
+        #params['matrix'] = 'spd_condmat.mat'
         matrix_params['problem_name'] = 'estrada_index'
-        matrix_params['a1'] = 1.01
+        matrix_params['a1'] = 5.0
         #matrix_params['a2'] = -1.0/(N*N - 1.0)
         matrix_params['a2'] = -1.0
         #matrix_params['a2'] = -0.065
         #matrix_params['problem_name'] = 'diffusion2D'
-        params['trace_tol'] = 3.0e-3
+
+        # for the inverse
+        #params['trace_tol'] = 1.0e-3
+        # for the exponential
+        params['trace_tol'] = 3.0e-1
+
         params['trace_use_Q'] = False
         params['trace_multilevel_construction'] = 'pyamg'
         params['max_nr_levels'] = 3
         # this parameter is changed to compare against MLMC , nr_defl = 2,32,128
-        params['nr_deflat_vctrs'] = 64
+        params['nr_deflat_vctrs'] = 0
 
         params['coarsest_level_directly'] = True
         params['accuracy_eigvs'] = 'high'
 
-        #params['function'] = 'inverse'
-        params['function'] = 'exponential'
+        params['function'] = 'inverse'
+        #params['function'] = 'exponential'
 
         params['aggrs'] = None
         params['dof'] = None
@@ -359,9 +368,9 @@ def G104():
     params = set_params('2dlaplace')
 
     # fixed parameters
-    params['solver'] = 'gmres'
-    params['solver_tol'] = 1e-3
-    params['solver_lambda_min'] = 1e-2
+    params['spec_function'] = 'mg'
+    params['function_tol'] = 1e-3
+    params['function_lambda_min'] = 1e-2
     params['aggregation_type'] = 'ASA'
 
     EXAMPLE_002(params)
@@ -497,10 +506,10 @@ def G111():
     params = set_params('estrada_index')
 
     # fixed parameters
-    params['solver'] = 'gmres'
-    params['solver_tol'] = 1e-3
-    params['solver_lambda_min'] = 1e-2
-    params['aggregation_type'] = 'SA'
+    params['spec_function'] = 'mg'
+    params['function_tol'] = 1e-3
+    params['function_lambda_min'] = 1e-2
+    params['aggregation_type'] = 'ASA'
 
     EXAMPLE_002(params)
 
@@ -562,8 +571,8 @@ def G204():
     params = set_params('2dlaplace')
 
     # fixed parameters
-    params['solver'] = 'mg'
-    params['solver_tol'] = 1e-3
+    params['spec_function'] = 'mg'
+    params['function_tol'] = 1e-3
     params['max_nr_levels'] = 4
 
     EXAMPLE_001(params)

@@ -140,8 +140,18 @@ def function_sparse(A, b, tol, function, function_name, spec_name):
         warnings.simplefilter("ignore")
 
         def callback(xk):
-            #nonlocal num_iters
+            class context:
+                y = 0
+            def inner():
+                context.y += 1
+                return context.y
+            return inner
+
+        """
+        def callback(xk):
+            nonlocal num_iters
             num_iters += 1
+        """
 
         # call the function on your data
         if spec_name=="cg" or spec_name=="gmres":
@@ -160,6 +170,8 @@ def function_sparse(A, b, tol, function, function_name, spec_name):
             #print(np.linalg.norm(x))
             #print(num_iters)
             #exit(0)
+
+        num_iters = callback(0)()
 
     else:
 

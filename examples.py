@@ -33,7 +33,7 @@ def EXAMPLE_001(params):
     A,B = loadMatrix(matrix_name, params['matrix_params'])
 
     # setting function
-    function_name=params['function']
+    function_name = params['function']
     function = loadFunction(spec_name, A=A, B=B, function_name=function_name)
 
     # TODO : check more input params
@@ -69,13 +69,13 @@ def EXAMPLE_001(params):
     nr_ests = result['nr_ests']
     function_iters = result['function_iters']
 
-    if function_name=='mg':
+    if function_name=="inverse" and spec_name=='mg':
         total_complexity = result['total_complexity']
 
     print(" -- matrix : "+matrix_name)
     print(" -- matrix size : "+str(A.shape[0])+"x"+str(A.shape[1]))
     print(" -- tr(A^{-1}) = "+str(trace))
-    if function_name=='mg':
+    if function_name=="inverse" and spec_name=='mg':
         cmplxity = total_complexity/(1.0e+6)
         print(" -- total MG complexity = "+str(cmplxity)+" MFLOPS")
     print(" -- std dev = "+str(std_dev))
@@ -84,6 +84,9 @@ def EXAMPLE_001(params):
     print(" -- function iters = "+str(function_iters))
 
     print("\n")
+
+    if function_name=="exponential":
+        del function
 
 
 # this example assumes the matrix is Hermitian, and computes via MLMC
@@ -100,9 +103,9 @@ def EXAMPLE_002(params):
         matrix_name = params['matrix']
     if 'function' not in params:
         # choosing cg as default
-        function_name = 'cg'
+        spec_name = 'cg'
     else:
-        function_name = params['function']
+        spec_name = params['spec_function']
     if 'matrix_params' not in params:
         raise Exception("From <EXAMPLE_002(...)> : you need to provide the params of the matrix.")
 
@@ -110,7 +113,8 @@ def EXAMPLE_002(params):
     A,B = loadMatrix(matrix_name, params['matrix_params'])
 
     # setting function
-    function = loadFunction(function_name)
+    function_name = params['function']
+    function = loadFunction(spec_name, A=A, B=B, function_name=function_name)
 
     # TODO : check more input params
 
@@ -123,7 +127,8 @@ def EXAMPLE_002(params):
 
     trace_params = dict()
     function_params = dict()
-    function_params['name'] = function_name
+    function_params['spec_name'] = spec_name
+    function_params['function_name'] = function_name
     function_params['tol'] = function_tol
     function_params['lambda_min'] = function_lambda_min
     trace_params['function_params'] = function_params
@@ -163,3 +168,6 @@ def EXAMPLE_002(params):
         print("\t-- level MG complexity = "+str(cmplxity)+" MFLOPS")
 
     print("\n")
+
+    if function_name=="exponential":
+        del function

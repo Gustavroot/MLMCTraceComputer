@@ -19,6 +19,7 @@ from scipy.sparse.linalg import svds,eigsh,eigs
 from scipy.sparse import diags
 
 from scipy.linalg import expm
+from math import exp
 
 import time
 import os
@@ -133,54 +134,62 @@ def hutchinson(A, function, params):
     else:
         raise Exception("<accuracy_eigvs> does not have a possible value.")
 
-    print("Computing SVD (finest level) ...")
-    start = time.time()
-    if use_Q:
-        #Sy,Ux = eigsh( Q,k=nr_deflat_vctrs,which='LM',tol=tolx,sigma=0.0,ncv=ncvx )
+    if nr_deflat_vctrs>0:
+        print("Computing SVD (finest level) ...")
+        start = time.time()
+        if use_Q:
+            #Sy,Ux = eigsh( Q,k=nr_deflat_vctrs,which='LM',tol=tolx,sigma=0.0,ncv=ncvx )
 
-        #Sy,Ux = eigsh( Q,k=nr_deflat_vctrs,which='LM',tol=tolx,sigma=0.0 )
+            #Sy,Ux = eigsh( Q,k=nr_deflat_vctrs,which='LM',tol=tolx,sigma=0.0 )
 
-        Sy,Ux = eigsh( Q,k=nr_deflat_vctrs,which='SM',tol=tolx )
+            Sy,Ux = eigsh( Q,k=nr_deflat_vctrs,which='SM',tol=tolx )
 
-        Vx = np.copy(Ux)
-    else:
-        diffA = A-A.getH()
-        diffA_norm = norm( diffA,ord='fro' )
-        if diffA_norm<1.0e-14:
-            #Sy,Ux = eigsh( A,k=nr_deflat_vctrs,which='LM',tol=tolx,sigma=0.0,ncv=ncvx )
-            Sy,Ux = eigsh( A,k=nr_deflat_vctrs,which='SM',tol=tolx )
             Vx = np.copy(Ux)
         else:
-            Ux,Sy,Vy = svds( A,k=nr_deflat_vctrs,which='SM',tol=tolx )
-            Vx = Vy.transpose().conjugate()
-    Sx = np.diag(Sy)
-    end = time.time()
-    print("... done")
-    print("elapsed time = "+str(end-start))
-    try:
-        nr_cores = int(os.getenv('OMP_NUM_THREADS'))
-        print("IMPORTANT : this SVD decomposition was computed with "+str(nr_cores)+" cores i.e. elapsed time = "+str((end-start)*nr_cores)+" cpu seconds")
-    except TypeError:
-        raise Exception("Run : << export OMP_NUM_THREADS=32 >>")
-    #print("... done (elapsed time = "+str(end-start)+")")
+            diffA = A-A.getH()
+            diffA_norm = norm( diffA,ord='fro' )
+            if diffA_norm<1.0e-14:
+                #Sy,Ux = eigsh( A,k=nr_deflat_vctrs,which='LM',tol=tolx,sigma=0.0,ncv=ncvx )
+                Sy,Ux = eigsh( A,k=nr_deflat_vctrs,which='SM',tol=tolx )
+                Vx = np.copy(Ux)
+            else:
+                Ux,Sy,Vy = svds( A,k=nr_deflat_vctrs,which='SM',tol=tolx )
+                Vx = Vy.transpose().conjugate()
+        Sx = np.diag(Sy)
+        end = time.time()
+        print("... done")
+        print("elapsed time = "+str(end-start))
+
+        try:
+            nr_cores = int(os.getenv('OMP_NUM_THREADS'))
+            print("IMPORTANT : this SVD decomposition was computed with "+str(nr_cores)+" cores i.e. elapsed time = "+str((end-start)*nr_cores)+" cpu seconds")
+        except TypeError:
+            raise Exception("Run : << export OMP_NUM_THREADS=32 >>")
 
     # tr( A ) = tr(U1H*U1* S1 ) + tr( A *(I-U1*U1H))
     # tr( exp(-L) ) = tr(U1H*U1* exp(-S1) ) + tr( exp(-L) *(I-U1*U1H))
     # tr( exp(-L) *(I-U1*U1H)) = (1/n)sum^{n} ( ziH * EXPOFIT( -L,(I-U1*U1H)*zi ) )
 
-    # compute low-rank part of deflation
-    #small_A = np.dot(Vx.transpose().conjugate(),Ux) * np.linalg.inv(Sx)
-    small_A = np.dot(Vx.transpose().conjugate(),Ux) * expm(-Sx)
-    tr1 = np.trace(small_A)
+    if nr_deflat_vctrs>0:
+        # compute low-rank part of deflation
+        #small_A = np.dot(Vx.transpose().conjugate(),Ux) * np.linalg.inv(Sx)
+        small_A = np.dot(Vx.transpose().conjugate(),Ux) * expm(-Sx)
+        tr1 = np.trace(small_A)
+    else:
+        tr1 = 0.0
 
-    #print("Sending A as dense ...")
-    function.putvalue('Ax',A.todense())
-    #print("... done")
+    if function_name=="exponential":
+        #print("Sending A as dense ...")
+        function.putvalue('Ax',A.todense())
+        #print("... done")
 
     # TODO : remove this section
-    print("Computing theoretical trace ...")
-    Ax = -A
-    trx = np.trace( expm(Ax.todense()) )
+    print("\nComputing theoretical trace ...")
+    if function_name=="exponential":
+        Ax = -A
+        trx = np.trace( expm(Ax.todense()) )
+    else:
+        trx = np.trace(np.linalg.inv( A.todense() ))
     print("tr(f(A)) = "+str(trx))
     print("... done")
 
@@ -250,8 +259,11 @@ def hutchinson(A, function, params):
 
         x = x.astype(A.dtype)
 
-        # deflating Vx from x
-        x_def = x - np.dot(Vx,np.dot(Vx.transpose().conjugate(),x))
+        if nr_deflat_vctrs>0:
+            # deflating Vx from x
+            x_def = x - np.dot(Vx,np.dot(Vx.transpose().conjugate(),x))
+        else:
+            x_def = x
 
         if use_Q:
             if params['problem_name']=='schwinger':
@@ -273,7 +285,7 @@ def hutchinson(A, function, params):
         ests_dev = sqrt(   np.sum(   np.square(np.abs(ests[0:(i+1)]-ests_avg))   )/(i+1)   )
         error_est = ests_dev/sqrt(i+1)
 
-        print(str(i)+" .. "+str(ests_avg)+" .. "+str(rough_trace)+" .. "+str(error_est)+" .. "+str(rough_trace_tol)+" .. "+str(num_iters))
+        #print(str(i)+" .. "+str(ests_avg)+" .. "+str(rough_trace)+" .. "+str(error_est)+" .. "+str(rough_trace_tol)+" .. "+str(num_iters))
 
         # break condition
         if i>=5 and error_est<rough_trace_tol:
@@ -284,21 +296,22 @@ def hutchinson(A, function, params):
     result['std_dev'] = ests_dev
     result['nr_ests'] = i
     result['function_iters'] = function_iters
-    if function_name=='mg':
+    if function_name=="inverse" and  spec_name=='mg':
         result['total_complexity'] = flopsV(len(function.levels), function.levels, 0)*function_iters
 
     return result
 
 
 # compute tr(A^{-1}) via MLMC
-def mlmc(A, solver, params):
+def mlmc(A, function, params):
 
     # TODO : check input params !
 
-    # solver params
-    solver_name = params['solver_params']['name']
-    solver_tol = params['solver_params']['tol']
-    lambda_min = params['solver_params']['lambda_min']
+    # function params
+    function_name = params['function_params']['function_name']
+    spec_name = params['function_params']['spec_name']
+    function_tol = params['function_params']['tol']
+    lambda_min = params['function_params']['lambda_min']
 
     # trace params
     trace_tol = params['tol']
@@ -318,7 +331,7 @@ def mlmc(A, solver, params):
         if params['aggregation_type']=='SA':
             ml = pyamg.smoothed_aggregation_solver( A,max_levels=max_nr_levels )
         elif params['aggregation_type']=='ASA':
-            [ml, work] = adaptive_sa_solver(A, num_candidates=2, candidate_iters=2, improvement_iters=3,
+            [ml, work] = adaptive_sa_solver(A, num_candidates=1, candidate_iters=2, improvement_iters=8,
                                             strength='symmetric', aggregate='standard', max_levels=max_nr_levels)
         else:
             raise Exception("Aggregation type not specified for PyAMG")
@@ -385,22 +398,92 @@ def mlmc(A, solver, params):
 
     for i in range(nr_levels):
         print("size(A"+str(i)+") = "+str(ml.levels[i].A.shape[0])+"x"+str(ml.levels[i].A.shape[1]))
+    for i in range(nr_levels-1):
+        print("size(P"+str(i)+") = "+str(ml.levels[i].P.shape[0])+"x"+str(ml.levels[i].P.shape[1]))
 
     print("")
 
+    #for i in range(nr_levels-1):
+    #    ml.levels[i].P = ml.levels[i].P.astype(A.dtype)
+    #    ml.levels[i].R = ml.levels[i].R.astype(A.dtype)
+
+    for i in range(nr_levels-1):
+        ml.levels[i].P = csr_matrix(ml.levels[i].P)
+        ml.levels[i].R = csr_matrix(ml.levels[i].R)
+
+    # ------------------------------------------------------------------------------------
+    # ------------------------------------------------------------------------------------
+
+    Bx1 = ml.levels[0].A.copy()
+    Bx2 = ml.levels[1].A.copy()
+    Bx3 = ml.levels[2].A.copy()
+
+    Cx1 = ml.levels[0].P.copy()
+    Dx1 = ml.levels[0].R.copy()
+    Cx2 = ml.levels[1].P.copy()
+    Dx2 = ml.levels[1].R.copy()
+
+    if not (function_name=="exponential"):
+        Bx1inv = np.linalg.inv(Bx1.todense())
+        Bx2inv = np.linalg.inv(Bx2.todense())
+        Bx3inv = np.linalg.inv(Bx3.todense())
+    else:
+        Bx1inv = expm(-Bx1).todense()
+        Bx2inv = expm(-Bx2).todense()
+        Bx3inv = expm(-Bx3).todense()
+
+    Bx2invproj = Cx1*Bx2inv*Dx1
+    Bx3invproj = (Cx1*Cx2)*Bx3inv*(Dx2*Dx1)
+
+    diffxinv1 = Bx1inv - Bx2invproj
+    diffxinv1xx = diffxinv1 + diffxinv1.transpose()
+
+    diffxinv2 = Bx2invproj - Bx3invproj
+    diffxinv2xx = diffxinv2 + diffxinv2.transpose()
+
+    offdiag_fro_norm1 = npnorm( diffxinv1xx-np.diag(np.diag(diffxinv1xx)), ord='fro' )
+    offdiag_fro_norm2 = npnorm( diffxinv2xx-np.diag(np.diag(diffxinv2xx)), ord='fro' )
+
+    print("\nTheoretical estimation of variance, diff at level 1 : "+str(0.5*offdiag_fro_norm1*offdiag_fro_norm1))
+    print("Theoretical estimation of variance, diff at level 2 : "+str(0.5*offdiag_fro_norm2*offdiag_fro_norm2))
+
+    # -------------
+
+    pure_x = Bx1inv+Bx1inv.transpose()
+    offdiag_fro_norm = npnorm( pure_x-np.diag(np.diag(pure_x)), ord='fro' )
+    print("Theoretical estimation of variance, pure : "+str(0.5*offdiag_fro_norm*offdiag_fro_norm))
+    print("")
+
+    # ------------------------------------------------------------------------------------
+    # ------------------------------------------------------------------------------------
+
     # FIXME : theoretical esimation goes here
 
-    print("\nCreating solver with PyAMG for each level ...")
+    if not (function_name=="exponential"):
+        print("\nCreating solver with PyAMG for each level ...")
+        ml_solvers = list()
+        for i in range(nr_levels-1):
+            [mlx, work] = adaptive_sa_solver(ml.levels[i].A, num_candidates=2, candidate_iters=5, improvement_iters=8,
+                                             strength='symmetric', aggregate='standard', max_levels=9)
+            ml_solvers.append(mlx)
+        print("... done")
 
-    ml_solvers = list()
-    for i in range(nr_levels-1):
-        [mlx, work] = adaptive_sa_solver(ml.levels[i].A, num_candidates=2, candidate_iters=5, improvement_iters=8,
-                                         strength='symmetric', aggregate='standard', max_levels=9)
-        ml_solvers.append(mlx)
+    function_tol = 1e-5
 
+    if function_name=="exponential":
+        #print("Sending A as dense ...")
+        function.putvalue('Ax',A.todense())
+        #print("... done")
+
+    # TODO : remove this section
+    print("\nComputing theoretical trace ...")
+    if function_name=="exponential":
+        Ax = -A
+        trx = np.trace( expm(Ax.todense()) )
+    else:
+        trx = np.trace(np.linalg.inv( A.todense() ))
+    print("tr(f(A)) = "+str(trx))
     print("... done")
-
-    solver_tol = 1e-5
 
     print("\nComputing rough estimation of the trace ...")
 
@@ -430,7 +513,10 @@ def mlmc(A, solver, params):
             elif params['problem_name']=='LQCD':
                 x = gamma5_application(x,0,params['dof'])
 
-        z,num_iters = solver_sparse(A,x,solver_tol,ml_solvers[0],"mg")
+        if not (function_name=="exponential"):
+            z,num_iters = function_sparse(A,x,function_tol,ml_solvers[0],function_name,spec_name)
+        else:
+            z,num_iters = function_sparse(A,x,function_tol,function,function_name,spec_name)
 
         print(num_iters)
 
@@ -458,7 +544,7 @@ def mlmc(A, solver, params):
     output_params['results'] = list()
     for i in range(nr_levels):
         output_params['results'].append(dict())
-        output_params['results'][i]['solver_iters'] = 0
+        output_params['results'][i]['function_iters'] = 0
         output_params['results'][i]['nr_ests'] = 0
         output_params['results'][i]['ests_avg'] = 0.0
         output_params['results'][i]['ests_dev'] = 0.0
@@ -472,17 +558,23 @@ def mlmc(A, solver, params):
 
     print("")
 
-    tol_fraction0 = 0.35 # = 0.65/8.0
-    tol_fraction1 = 0.55 # = 0.28*5.0
+    tol_fraction0 = 0.5 # = 0.65/8.0
+    tol_fraction1 = 0.5 # = 0.28*5.0
 
-    cummP = sp.sparse.identity(N)
-    cummR = sp.sparse.identity(N)
+    cummP = sp.sparse.identity(N,dtype=A.dtype)
+    cummR = sp.sparse.identity(N,dtype=A.dtype)
+    cummP = csr_matrix(cummP)
+    cummR = csr_matrix(cummR)
 
-    # coarsest-level inverse
-    Acc = ml.levels[nr_levels-1].A
-    Ncc = Acc.shape[0]
-    np_Acc = Acc.todense()
-    np_Acc_inv = np.linalg.inv(np_Acc)
+    if not (function_name=="exponential"):
+        # coarsest-level inverse
+        Acc = ml.levels[nr_levels-1].A
+        Ncc = Acc.shape[0]
+        np_Acc = Acc.todense()
+        np_Acc_inv = np.linalg.inv(np_Acc)
+        np_Acc_fnctn = np_Acc_inv[:,:]
+    else:
+        np_Acc_fnctn = expm( -ml.levels[nr_levels-1].A )
 
     for i in range(nr_levels-1):
 
@@ -529,9 +621,15 @@ def mlmc(A, solver, params):
                 elif params['problem_name']=='LQCD':
                     x = gamma5_application(x,i,params['dof'])
 
-            z,num_iters = solver_sparse(Af,x,level_solver_tol,ml_solvers[i],"mg")
+            if function_name=="exponential":
+                function.putvalue('Ax',Af.todense())
 
-            output_params['results'][i]['solver_iters'] += num_iters
+            if not (function_name=="exponential"):
+                z,num_iters = function_sparse(Af,x,level_solver_tol,ml_solvers[i],function_name,spec_name)
+            else:
+                z,num_iters = function_sparse(Af,x,level_solver_tol,function,function_name,spec_name)
+
+            output_params['results'][i]['function_iters'] += num_iters
 
             # reverting back the application of gamma
             if use_Q:
@@ -549,19 +647,31 @@ def mlmc(A, solver, params):
                     xc = gamma5_application(xc,i+1,params['dof'])
 
             if (i+1)==(nr_levels-1):
-                # solve directly
+                # apply function <directly> i.e. not iteratively
                 #np_Ac = Ac.todense()
-                y = np.dot(np_Acc_inv,xc)
+                if function_name=="exponential":
+                    np_Acx = np_Acc_fnctn.todense()
+                    y = np.dot(np_Acx,xc)
+                else:
+                    y = np.dot(np_Acc_fnctn,xc)
                 y = np.asarray(y).reshape(-1)
                 num_iters = 1
             else:
-                y,num_iters = solver_sparse(Ac,xc,level_solver_tol,ml_solvers[i+1],"mg")
+                if function_name=="exponential":
+                    function.putvalue('Ax',Ac.todense())
+
+                if not (function_name=="exponential"):
+                    y,num_iters = function_sparse(Ac,xc,level_solver_tol,ml_solvers[i+1],function_name,spec_name)
+                else:
+                    y,num_iters = function_sparse(Ac,xc,level_solver_tol,function,function_name,spec_name)
             #y,num_iters = solver_sparse(Ac,xc,level_solver_tol,ml_solvers[i+1],"mg")
 
-            output_params['results'][i+1]['solver_iters'] += num_iters
+            output_params['results'][i+1]['function_iters'] += num_iters
 
             e1 = np.vdot(x0,cummP*z)
-            e2 = np.vdot(x0,cummP*P*y)
+            cummPh = cummP*P
+            #yrh = cummPh*y
+            e2 = np.vdot(x0,cummPh*y)
 
             ests[j] = e1-e2
 
@@ -571,7 +681,7 @@ def mlmc(A, solver, params):
             ests_dev = sqrt(np.sum(np.square(np.abs(ests[0:(j+1)]-ests_avg)))/(j+1))
             error_est = ests_dev/sqrt(j+1)
 
-            print(str(j)+" .. "+str(ests_avg)+" .. "+str(error_est)+" .. "+str(level_trace_tol))
+            #print(str(j)+" .. "+str(ests_avg)+" .. "+str(error_est)+" .. "+str(level_trace_tol))
 
             # break condition
             if j>=5 and error_est<level_trace_tol:
@@ -579,9 +689,9 @@ def mlmc(A, solver, params):
 
         # cummulative R and P
         cummP1 = cummP*P
-        cummP = sp.sparse.csr_matrix.copy(cummP1)
+        cummP = cummP1.copy()
         cummR1 = R*cummR
-        cummR = sp.sparse.csr_matrix.copy(cummR1)
+        cummR = cummR1.copy()
 
         output_params['results'][i]['nr_ests'] += j
 
@@ -594,11 +704,14 @@ def mlmc(A, solver, params):
     # compute now at the coarsest level
 
     # in case the coarsest matrix is 1x1
-    if Acc.shape[0]==1:
+    if ml.levels[nr_levels-1].A.shape[0]==1:
 
         output_params['results'][nr_levels-1]['nr_ests'] += 1
         # set trace and standard deviation
-        output_params['results'][nr_levels-1]['ests_avg'] = 1.0/csr_matrix(Acc)[0,0]
+        if not (function_name=="exponential"):
+            output_params['results'][nr_levels-1]['ests_avg'] = 1.0/csr_matrix(Acc)[0,0]
+        else:
+            output_params['results'][nr_levels-1]['ests_avg'] = exp(csr_matrix(Acc)[0,0])
         output_params['results'][nr_levels-1]['ests_dev'] = 0
 
     else:
@@ -616,7 +729,11 @@ def mlmc(A, solver, params):
                 print("... done")
                 output_params['results'][nr_levels-1]['ests_avg'] = np.trace(np.linalg.inv( Qcc.todense() ))
             else:
-                output_params['results'][nr_levels-1]['ests_avg'] = np.trace(cummR*cummP*np_Acc_inv)
+                crst_mat = cummR*cummP*np_Acc_fnctn
+                if function_name=="exponential":
+                    output_params['results'][nr_levels-1]['ests_avg'] = np.trace(crst_mat.todense())
+                else:
+                    output_params['results'][nr_levels-1]['ests_avg'] = np.trace(crst_mat)
 
             output_params['results'][nr_levels-1]['ests_dev'] = 0
 
@@ -699,7 +816,7 @@ def mlmc(A, solver, params):
                 y = np.asarray(y).reshape(-1)
                 num_iters = 1
 
-                output_params['results'][nr_levels-1]['solver_iters'] += num_iters
+                output_params['results'][nr_levels-1]['function_iters'] += num_iters
 
                 ests[i] = np.vdot(xc,y)
 
@@ -720,17 +837,18 @@ def mlmc(A, solver, params):
             output_params['results'][nr_levels-1]['ests_avg'] = ests_avg+tr1c
             output_params['results'][nr_levels-1]['ests_dev'] = ests_dev
 
-    for i in range(nr_levels-1):
-        #output_params['results'][i]['level_complexity'] += output_params['results'][i]['solver_iters']*ml_solvers[i].cycle_complexity()
-        slvr = ml_solvers[i]
-        #print( "flops/cycle = "+str(flopsV(len(slvr.levels), slvr.levels, 0)) )
-        output_params['results'][i]['level_complexity'] = output_params['results'][i]['solver_iters']*flopsV(len(slvr.levels), slvr.levels, 0)
+    if not (function_name=="exponential"):
+        for i in range(nr_levels-1):
+            #output_params['results'][i]['level_complexity'] += output_params['results'][i]['solver_iters']*ml_solvers[i].cycle_complexity()
+            slvr = ml_solvers[i]
+            #print( "flops/cycle = "+str(flopsV(len(slvr.levels), slvr.levels, 0)) )
+            output_params['results'][i]['level_complexity'] = output_params['results'][i]['function_iters']*flopsV(len(slvr.levels), slvr.levels, 0)
 
     if params['coarsest_level_directly']==True:
         output_params['results'][nr_levels-1]['level_complexity'] = pow(ml.levels[nr_levels-1].A.shape[0],3) + \
-                                                                    output_params['results'][nr_levels-1]['solver_iters']*pow(ml.levels[nr_levels-1].A.shape[0],2)
+                                                                    output_params['results'][nr_levels-1]['function_iters']*pow(ml.levels[nr_levels-1].A.shape[0],2)
     else:
-        output_params['results'][nr_levels-1]['level_complexity'] = output_params['results'][nr_levels-1]['solver_iters']*(ml.levels[nr_levels-1].A.shape[0]*ml.levels[nr_levels-1].A.shape[0])
+        output_params['results'][nr_levels-1]['level_complexity'] = output_params['results'][nr_levels-1]['function_iters']*(ml.levels[nr_levels-1].A.shape[0]*ml.levels[nr_levels-1].A.shape[0])
 
     #print( output_params['results'][nr_levels-1]['solver_iters'] * (ml.levels[nr_levels-1].A.shape[0]*ml.levels[nr_levels-1].A.shape[0]) )
 

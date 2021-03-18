@@ -2,6 +2,18 @@ from gateway import G101,G102,G103,G104,G105,G106,G107,G108,G109,G110,G111
 from gateway import G201,G202,G203,G204,G205,G206,G207,G208,G209,G210,G211
 
 
+# IMPORTANT ---> to run :
+
+# for the exponential function (PYTHON 2):
+#		in gateway.py, set : params['function'] = 'exponential'
+#		to run : python2 main.py
+
+# for the inverse function (PYTHON 3):
+#		in gateway.py, set : params['function'] = 'inverse'
+#		to run : python3 main.py
+
+
+
 # main section
 if __name__=='__main__':
 
@@ -20,8 +32,8 @@ if __name__=='__main__':
     #G203()
 
     # Laplace 2D
-    #G104()
-    #G204()
+    G104()
+    G204()
 
     # Linear Elasticity
     #G105()
@@ -49,4 +61,4 @@ if __name__=='__main__':
 
     # Estrada Index
     #G111()
-    G211()
+    #G211()
