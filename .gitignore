@@ -4,3 +4,4 @@ output*
 others/output*
 *.pyc
 others/DDalphaAMG/LQCD_A1large.mat
+trash/

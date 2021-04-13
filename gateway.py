@@ -20,11 +20,12 @@ def set_params(example_name):
         matrix_params['N'] = 32
         params['matrix'] = '2dlaplace'
         matrix_params['problem_name'] = '2dlaplace'
-        params['trace_tol'] = 0.2e-2
+        params['trace_tol'] = 1.0e-2
         params['trace_use_Q'] = False
+        #params['trace_multilevel_construction'] = 'direct_interpolation'
         params['trace_multilevel_construction'] = 'pyamg'
         params['max_nr_levels'] = 3
-        params['nr_deflat_vctrs'] = 0
+        params['nr_deflat_vctrs'] = 4
 
         params['coarsest_level_directly'] = True
         params['accuracy_eigvs'] = 'high'
@@ -32,8 +33,8 @@ def set_params(example_name):
         params['aggrs'] = None
         params['dof'] = None
 
-        #params['function'] = 'inverse'
-        params['function'] = 'exponential'
+        params['function'] = 'inverse'
+        #params['function'] = 'exponential'
 
         # fixed parameters
         params['matrix_params'] = matrix_params

@@ -55,6 +55,13 @@ def write_png(A, filename):
 """
 
 
+# in LQCD e.g. (4^4 lattice) :
+#	manual_aggregation( A, [12,24], [2*2*2*2] )
+
+# in LQCD e.g. (8^4 lattice) :
+#	manual_aggregation( A, [12,24], [4*4*4*4] )
+
+
 
 # <dof> :   per level (except the last one, of course), this is a list of
 #           the number of degrees of freedom for the next level
@@ -107,25 +114,9 @@ def manual_aggregation(A, dof=[2,2,2], aggrs=[2*2,2*2], max_levels=3, dim=2, acc
         #eigvals,eig_vecsx = eigsh(Al, k=nt*dof[i+1], which='SM', return_eigenvectors=True, tol=1e-5, maxiter=1000000)
         #eigvals,eig_vecsx = eigs(Al, k=nt*dof[i+1], which='SM', return_eigenvectors=True, tol=1e-2, maxiter=1000000)
 
-
-
-
-
-
-
-
-
         #eigvals,eig_vecsx = eigsh( Al, k=1, which='SR', tol=tolx, maxiter=1000000 )
         #print(eigvals)
         #exit(0)
-
-
-
-
-
-
-
-
 
         if i<3:
             eigvals,eig_vecsx = eigs( Al, k=nt*dof[i+1], which='LM', tol=tolx, maxiter=1000000, sigma=0.0, ncv=ncvx )

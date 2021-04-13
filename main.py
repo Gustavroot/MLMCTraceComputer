@@ -32,8 +32,8 @@ if __name__=='__main__':
     #G203()
 
     # Laplace 2D
-    #G104()
-    #G204()
+    G104()
+    G204()
 
     # Linear Elasticity
     #G105()
@@ -60,5 +60,5 @@ if __name__=='__main__':
     #G210()
 
     # Estrada Index
-    G111()
-    G211()
+    #G111()
+    #G211()

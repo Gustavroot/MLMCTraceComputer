@@ -10,12 +10,13 @@ import scipy.io
 
 nr_levels = 2
 
-#sizes_A = [(49152,49152),(768,768)]
+sizes_A = [(49152,49152)]
+#sizes_A = [(3072,3072),(768,768)]
+
 #sizes_Q = [(49152,49152),(768,768)]
 #sizes_P = [(49152,768)]
-sizes_A = [(3072,3072),(768,768)]
 #sizes_Q = [(3072,3072),(1536,1536)]
-sizes_P = [(49152,768)]
+#sizes_P = [(49152,768)]
 
 #sizes_A = [(4,4),(4,4)]
 #sizes_P = [(4,4)]
@@ -27,7 +28,7 @@ Ps = list()
 # do A first
 for i in range(nr_levels):
 
-    if i>0 : continue
+    if i>0 : break
 
     print("----------")
     print("A, level="+str(i))

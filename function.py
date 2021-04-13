@@ -139,19 +139,19 @@ def function_sparse(A, b, tol, function, function_name, spec_name):
 
         warnings.simplefilter("ignore")
 
-        def callback(xk):
-            class context:
-                y = 0
-            def inner():
-                context.y += 1
-                return context.y
-            return inner
+        #def callback(xk):
+        #    class context:
+        #        y = 0
+        #    def inner():
+        #        context.y += 1
+        #        return context.y
+        #    return inner
 
-        """
+        #"""
         def callback(xk):
             nonlocal num_iters
             num_iters += 1
-        """
+        #"""
 
         # call the function on your data
         if spec_name=="cg" or spec_name=="gmres":
@@ -171,7 +171,9 @@ def function_sparse(A, b, tol, function, function_name, spec_name):
             #print(num_iters)
             #exit(0)
 
-        num_iters = callback(0)()
+        #num_iters = callback(0)()
+        #print(num_iters)
+        #num_iters = callback()
 
     else:
 
@@ -204,7 +206,7 @@ def loadFunction(spec_name, A=None, B=None, function_name='inverse'):
             return sp.sparse.linalg.gmres
 
         elif spec_name=='mg':
-            [ml, work] = pyamg.aggregation.adaptive.adaptive_sa_solver(A, num_candidates=2, candidate_iters=5, improvement_iters=8, strength='symmetric', aggregate='standard', max_levels=9)
+            [ml, work] = pyamg.aggregation.adaptive.adaptive_sa_solver(A, num_candidates=1, candidate_iters=1, improvement_iters=1, strength='symmetric', aggregate='standard', max_levels=2)
             return ml
 
         else:

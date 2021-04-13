@@ -25,6 +25,14 @@ import time
 import os
 
 
+from pyamg.gallery import poisson, load_example
+from pyamg.strength import classical_strength_of_connection,symmetric_strength_of_connection
+
+from pyamg.classical import split
+from pyamg.classical.classical import ruge_stuben_solver
+from pyamg.classical.interpolate import direct_interpolation
+
+
 # ---------------------------------
 
 # specific to LQCD
@@ -292,6 +300,7 @@ def hutchinson(A, function, params):
             break
 
     result = dict()
+    print(tr1)
     result['trace'] = ests_avg+tr1
     result['std_dev'] = ests_dev
     result['nr_ests'] = i
@@ -336,6 +345,32 @@ def mlmc(A, function, params):
         else:
             raise Exception("Aggregation type not specified for PyAMG")
         #[ml, work] = adaptive_sa_solver(A, num_candidates=5, improvement_iters=5)
+
+    elif trace_ml_constr=='direct_interpolation':
+
+        ml = SimpleML()
+        # appending level 0
+        ml.levels.append(LevelML())
+        ml.levels[0].A = A.copy()
+
+        for i in range(max_nr_levels-1):
+
+            print(i)
+
+            print(ml.levels[i].A)
+
+            S = symmetric_strength_of_connection(ml.levels[i].A)
+            splitting = split.RS(S)
+
+            ml.levels[i].P = 1.0 * direct_interpolation(ml.levels[i].A, S, splitting)
+            ml.levels[i].R = 1.0 * ml.levels[i].P.transpose().conjugate().copy()
+
+            print(ml.levels[i].P)
+            print(ml.levels[i].P.count_nonzero())
+            print(ml.levels[i].P * ml.levels[i].P.transpose().conjugate())
+
+            ml.levels.append(LevelML())
+            ml.levels[i+1].A = csr_matrix( ml.levels[i].R * ml.levels[i].A * ml.levels[i].P )
 
     # specific to Schwinger
     elif trace_ml_constr=='manual_aggregation':
@@ -402,6 +437,8 @@ def mlmc(A, function, params):
         print("size(P"+str(i)+") = "+str(ml.levels[i].P.shape[0])+"x"+str(ml.levels[i].P.shape[1]))
 
     print("")
+
+    #exit(0)
 
     #for i in range(nr_levels-1):
     #    ml.levels[i].P = ml.levels[i].P.astype(A.dtype)
