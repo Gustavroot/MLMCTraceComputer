@@ -180,8 +180,10 @@ def hutchinson(A, function, params):
 
     if nr_deflat_vctrs>0:
         # compute low-rank part of deflation
-        #small_A = np.dot(Vx.transpose().conjugate(),Ux) * np.linalg.inv(Sx)
-        small_A = np.dot(Vx.transpose().conjugate(),Ux) * expm(-Sx)
+        if not function_name=="exponential":
+            small_A = np.dot(Vx.transpose().conjugate(),Ux) * np.linalg.inv(Sx)
+        else:
+            small_A = np.dot(Vx.transpose().conjugate(),Ux) * expm(-Sx)
         tr1 = np.trace(small_A)
     else:
         tr1 = 0.0
@@ -191,6 +193,7 @@ def hutchinson(A, function, params):
         function.putvalue('Ax',A.todense())
         #print("... done")
 
+    """
     # TODO : remove this section
     print("\nComputing theoretical trace ...")
     if function_name=="exponential":
@@ -200,6 +203,7 @@ def hutchinson(A, function, params):
         trx = np.trace(np.linalg.inv( A.todense() ))
     print("tr(f(A)) = "+str(trx))
     print("... done")
+    """
 
     np.random.seed(123456)
 
@@ -448,6 +452,7 @@ def mlmc(A, function, params):
         ml.levels[i].P = csr_matrix(ml.levels[i].P)
         ml.levels[i].R = csr_matrix(ml.levels[i].R)
 
+    """
     # ------------------------------------------------------------------------------------
     # ------------------------------------------------------------------------------------
 
@@ -493,6 +498,7 @@ def mlmc(A, function, params):
 
     # ------------------------------------------------------------------------------------
     # ------------------------------------------------------------------------------------
+    """
 
     # FIXME : theoretical esimation goes here
 
@@ -512,6 +518,7 @@ def mlmc(A, function, params):
         function.putvalue('Ax',A.todense())
         #print("... done")
 
+    """
     # TODO : remove this section
     print("\nComputing theoretical trace ...")
     if function_name=="exponential":
@@ -521,6 +528,7 @@ def mlmc(A, function, params):
         trx = np.trace(np.linalg.inv( A.todense() ))
     print("tr(f(A)) = "+str(trx))
     print("... done")
+    """
 
     print("\nComputing rough estimation of the trace ...")
 

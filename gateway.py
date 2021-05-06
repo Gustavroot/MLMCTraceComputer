@@ -178,6 +178,8 @@ def set_params(example_name):
         #matrix_params['mass'] = -0.13
         matrix_params['mass'] = 0.0
 
+        params['function'] = 'inverse'
+
         # fixed parameters
         params['matrix_params'] = matrix_params
 
@@ -207,6 +209,8 @@ def set_params(example_name):
 
         params['aggrs'] = [2*2,2*2,2*2]
         params['dof'] = [2,2,2,2]
+
+        params['function'] = 'inverse'
 
         # fixed parameters
         params['matrix_params'] = matrix_params
@@ -325,9 +329,9 @@ def G101():
     params = set_params('schwinger16')
 
     # fixed params
-    params['solver'] = 'gmres'
-    params['solver_tol'] = 1e-3
-    params['solver_lambda_min'] = 1e-2
+    params['spec_function'] = 'mg'
+    params['function_tol'] = 1e-3
+    params['function_lambda_min'] = 1e-2
     params['aggregation_type'] = 'XX'
 
     EXAMPLE_002(params)
@@ -340,9 +344,9 @@ def G102():
 
     params = set_params('schwinger128')
 
-    params['solver'] = 'gmres'
-    params['solver_tol'] = 1e-3
-    params['solver_lambda_min'] = 1e-2
+    params['spec_function'] = 'mg'
+    params['function_tol'] = 1e-3
+    params['function_lambda_min'] = 1e-2
     params['aggregation_type'] = 'ASA'
 
     EXAMPLE_002(params)
@@ -530,9 +534,9 @@ def G201():
     params = set_params('schwinger16')
 
     # fixed parameters
-    params['solver'] = 'mg'
-    params['solver_tol'] = 1e-3
-    params['solver_lambda_min'] = 1e-2
+    params['spec_function'] = 'mg'
+    params['function_tol'] = 1e-3
+    params['function_lambda_min'] = 1e-2
     params['aggregation_type'] = 'XX'
 
     EXAMPLE_001(params)
@@ -545,8 +549,8 @@ def G202():
 
     params = set_params('schwinger128')
 
-    params['solver'] = 'mg'
-    params['solver_tol'] = 1e-3
+    params['spec_function'] = 'mg'
+    params['function_tol'] = 1e-3
     params['max_nr_levels'] = 4
 
     EXAMPLE_001(params)
