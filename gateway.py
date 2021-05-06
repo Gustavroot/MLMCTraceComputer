@@ -162,7 +162,7 @@ def set_params(example_name):
         matrix_params['N'] = 128
         params['matrix'] = 'mat_schwinger128x128b3phasenum11000.mat'
         matrix_params['problem_name'] = 'schwinger'
-        params['trace_tol'] = 2.5e-3
+        params['trace_tol'] = 1.0e-1
         params['trace_use_Q'] = False
         params['trace_multilevel_construction'] = 'manual_aggregation'
         #params['trace_multilevel_construction'] = 'pyamg'
@@ -170,13 +170,14 @@ def set_params(example_name):
         params['coarsest_level_directly'] = True
         params['accuracy_eigvs'] = 'high'
 
-        params['aggrs'] = [2*2,8*8,2*2]
-        params['dof'] = [2,2,8,8]
+        params['aggrs'] = [4*4,4*4,4*4]
+        params['dof'] = [2,4,4,4]
         params['nr_deflat_vctrs'] = params['dof'][1]
 
         #matrix_params['mass'] = -0.13750
         #matrix_params['mass'] = -0.13
-        matrix_params['mass'] = 0.0
+        # 0.13353501
+        matrix_params['mass'] = -0.132
 
         params['function'] = 'inverse'
 
@@ -196,7 +197,7 @@ def set_params(example_name):
         matrix_params['N'] = 16
         params['matrix'] = 'mat_schwinger16x16b3phasenum11000.mat'
         matrix_params['problem_name'] = 'schwinger'
-        params['trace_tol'] = 2.0e-2
+        params['trace_tol'] = 1.0e-1
         params['trace_use_Q'] = False
         params['trace_multilevel_construction'] = 'manual_aggregation'
         params['max_nr_levels'] = 3
@@ -205,7 +206,9 @@ def set_params(example_name):
         params['nr_deflat_vctrs'] = 2
 
         #matrix_params['mass'] = -0.8940
-        matrix_params['mass'] = -0.95
+        #matrix_params['mass'] = -0.95
+        # 1.00690114
+        matrix_params['mass'] = -1.0062
 
         params['aggrs'] = [2*2,2*2,2*2]
         params['dof'] = [2,2,2,2]

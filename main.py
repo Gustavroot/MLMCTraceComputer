@@ -21,14 +21,16 @@ if __name__=='__main__':
     # functions starting with G1 execute MLMC
 
     # Schwinger 16^2
-    os.environ['OMP_NUM_THREADS'] = '1'
-    G101()
-    os.environ['OMP_NUM_THREADS'] = '24'
-    G201()
+    #os.environ['OMP_NUM_THREADS'] = '1'
+    #G101()
+    #os.environ['OMP_NUM_THREADS'] = '24'
+    #G201()
 
     # Schwinger 128^2
-    #G102()
-    #G202()
+    os.environ['OMP_NUM_THREADS'] = '1'
+    G102()
+    os.environ['OMP_NUM_THREADS'] = '24'
+    G202()
 
     # Gauge Laplacian
     #G103()

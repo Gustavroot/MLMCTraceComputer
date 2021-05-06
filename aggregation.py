@@ -125,6 +125,9 @@ def manual_aggregation(A, dof=[2,2,2], aggrs=[2*2,2*2], max_levels=3, dim=2, acc
             eigvals,eig_vecsx = eigs( Al, k=nt*dof[i+1], which='LM', tol=1.0e-5, maxiter=1000000, sigma=0.0 )
             #eigvals,eig_vecsx = eigsh( Al, k=nt*dof[i+1], which='SM', tol=1.0e-5, maxiter=1000000 )
 
+        #print(eigvals)
+        #exit(0)
+
         eig_vecs = np.zeros((Al.shape[0],dof[i+1]), dtype=Al.dtype)
 
         #coeffs = [ 1.0/float(k+1) for k in range(nt) ]

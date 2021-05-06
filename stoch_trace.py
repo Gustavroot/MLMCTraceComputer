@@ -24,13 +24,15 @@ from math import exp
 import time
 import os
 
-
 from pyamg.gallery import poisson, load_example
 from pyamg.strength import classical_strength_of_connection,symmetric_strength_of_connection
 
 from pyamg.classical import split
 from pyamg.classical.classical import ruge_stuben_solver
 from pyamg.classical.interpolate import direct_interpolation
+
+from multigrid import mg_solve
+import multigrid as mg
 
 
 # ---------------------------------
@@ -101,6 +103,9 @@ def write_png(A, filename):
 
 # compute tr(A^{-1}) via Hutchinson
 def hutchinson(A, function, params):
+
+    #if params['problem_name']=='schwinger':
+    #    global ml
 
     # TODO : check input params !
 
@@ -231,7 +236,11 @@ def hutchinson(A, function, params):
             elif params['problem_name']=='LQCD':
                 x = gamma5_application(x,0,params['dof'])
 
-        z,num_iters = function_sparse(A,x,function_tol,function,function_name,spec_name)
+        if params['problem_name']=='schwinger':
+            mg.level_nr = 0
+            z,num_iters = mg_solve( A,x,function_tol )
+        else:
+            z,num_iters = function_sparse(A,x,function_tol,function,function_name,spec_name)
 
         if use_Q:
             if params['problem_name']=='schwinger':
@@ -283,7 +292,11 @@ def hutchinson(A, function, params):
             elif params['problem_name']=='LQCD':
                 x_def = gamma5_application(x_def,0,params['dof'])
 
-        z,num_iters = function_sparse(A,x_def,rough_function_tol,function,function_name,spec_name)
+        if params['problem_name']=='schwinger':
+            mg.level_nr = 0
+            z,num_iters = mg_solve( A,x,function_tol )
+        else:
+            z,num_iters = function_sparse(A,x_def,rough_function_tol,function,function_name,spec_name)
 
         function_iters += num_iters
 
@@ -318,6 +331,9 @@ def hutchinson(A, function, params):
 # compute tr(A^{-1}) via MLMC
 def mlmc(A, function, params):
 
+    #if params['problem_name']=='schwinger':
+    #    global ml
+
     # TODO : check input params !
 
     # function params
@@ -342,9 +358,9 @@ def mlmc(A, function, params):
     start = time.time()
     if trace_ml_constr=='pyamg':
         if params['aggregation_type']=='SA':
-            ml = pyamg.smoothed_aggregation_solver( A,max_levels=max_nr_levels )
+            mg.ml = pyamg.smoothed_aggregation_solver( A,max_levels=max_nr_levels )
         elif params['aggregation_type']=='ASA':
-            [ml, work] = adaptive_sa_solver(A, num_candidates=1, candidate_iters=2, improvement_iters=8,
+            [mg.ml, work] = adaptive_sa_solver(A, num_candidates=1, candidate_iters=2, improvement_iters=8,
                                             strength='symmetric', aggregate='standard', max_levels=max_nr_levels)
         else:
             raise Exception("Aggregation type not specified for PyAMG")
@@ -352,29 +368,29 @@ def mlmc(A, function, params):
 
     elif trace_ml_constr=='direct_interpolation':
 
-        ml = SimpleML()
+        mg.ml = SimpleML()
         # appending level 0
-        ml.levels.append(LevelML())
-        ml.levels[0].A = A.copy()
+        mg.ml.levels.append(LevelML())
+        mg.ml.levels[0].A = A.copy()
 
         for i in range(max_nr_levels-1):
 
             print(i)
 
-            print(ml.levels[i].A)
+            print(mg.ml.levels[i].A)
 
-            S = symmetric_strength_of_connection(ml.levels[i].A)
+            S = symmetric_strength_of_connection(mg.ml.levels[i].A)
             splitting = split.RS(S)
 
-            ml.levels[i].P = 1.0 * direct_interpolation(ml.levels[i].A, S, splitting)
-            ml.levels[i].R = 1.0 * ml.levels[i].P.transpose().conjugate().copy()
+            mg.ml.levels[i].P = 1.0 * direct_interpolation(mg.ml.levels[i].A, S, splitting)
+            mg.ml.levels[i].R = 1.0 * mg.ml.levels[i].P.transpose().conjugate().copy()
 
-            print(ml.levels[i].P)
-            print(ml.levels[i].P.count_nonzero())
-            print(ml.levels[i].P * ml.levels[i].P.transpose().conjugate())
+            print(mg.ml.levels[i].P)
+            print(mg.ml.levels[i].P.count_nonzero())
+            print(mg.ml.levels[i].P * mg.ml.levels[i].P.transpose().conjugate())
 
-            ml.levels.append(LevelML())
-            ml.levels[i+1].A = csr_matrix( ml.levels[i].R * ml.levels[i].A * ml.levels[i].P )
+            mg.ml.levels.append(LevelML())
+            mg.ml.levels[i+1].A = csr_matrix( mg.ml.levels[i].R * mg.ml.levels[i].A * mg.ml.levels[i].P )
 
     # specific to Schwinger
     elif trace_ml_constr=='manual_aggregation':
@@ -387,37 +403,37 @@ def mlmc(A, function, params):
 
         # 128 ---> 64 ---> 8 ---> 2
 
-        ml = manual_aggregation(A, dof=dof, aggrs=aggrs, max_levels=max_nr_levels, dim=2, acc_eigvs=params['accuracy_eigvs'], sys_type=params['problem_name'])
+        mg.ml = manual_aggregation(A, dof=dof, aggrs=aggrs, max_levels=max_nr_levels, dim=2, acc_eigvs=params['accuracy_eigvs'], sys_type=params['problem_name'])
 
     # specific to LQCD
     elif trace_ml_constr=='from_files':
 
         import scipy.io as sio
 
-        ml = SimpleML()
+        mg.ml = SimpleML()
 
         # load A at each level
         for i in range(max_nr_levels):
-            ml.levels.append(LevelML())
+            mg.ml.levels.append(LevelML())
             if i==0:
                 mat_contents = sio.loadmat('LQCD_A'+str(i+1)+'.mat')
                 Axx = mat_contents['A'+str(i+1)]
-                ml.levels[i].A = Axx.copy()
+                mg.ml.levels[i].A = Axx.copy()
 
         # load P at each level
         for i in range(max_nr_levels-1):
             mat_contents = sio.loadmat('LQCD_P'+str(i+1)+'.mat')
             Pxx = mat_contents['P'+str(i+1)]
-            ml.levels[i].P = Pxx.copy()
+            mg.ml.levels[i].P = Pxx.copy()
             # construct R from P
             Rxx = Pxx.copy()
             Rxx = Rxx.conjugate()
             Rxx = Rxx.transpose()
-            ml.levels[i].R = Rxx.copy()
+            mg.ml.levels[i].R = Rxx.copy()
 
         # build the other A's
         for i in range(1,max_nr_levels):
-            ml.levels[i].A = ml.levels[i-1].R*ml.levels[i-1].A*ml.levels[i-1].P
+            mg.ml.levels[i].A = mg.ml.levels[i-1].R*mg.ml.levels[i-1].A*mg.ml.levels[i-1].P
 
     else:
         raise Exception("The specified <trace_multilevel_constructor> does not exist.")
@@ -427,18 +443,19 @@ def mlmc(A, function, params):
     print("IMPORTANT : this ML hierarchy was computed with 1 core i.e. elapsed time = "+str(end-start)+" cpu seconds")
 
     print("\nMultilevel information:")
-    print(ml)
+    print(mg.ml)
 
     # the actual number of levels
-    nr_levels = len(ml.levels)
+    nr_levels = len(mg.ml.levels)
+    mg.total_levels = nr_levels
 
     if nr_levels<3:
         raise Exception("Use three or more levels.")
 
     for i in range(nr_levels):
-        print("size(A"+str(i)+") = "+str(ml.levels[i].A.shape[0])+"x"+str(ml.levels[i].A.shape[1]))
+        print("size(A"+str(i)+") = "+str(mg.ml.levels[i].A.shape[0])+"x"+str(mg.ml.levels[i].A.shape[1]))
     for i in range(nr_levels-1):
-        print("size(P"+str(i)+") = "+str(ml.levels[i].P.shape[0])+"x"+str(ml.levels[i].P.shape[1]))
+        print("size(P"+str(i)+") = "+str(mg.ml.levels[i].P.shape[0])+"x"+str(mg.ml.levels[i].P.shape[1]))
 
     print("")
 
@@ -449,8 +466,8 @@ def mlmc(A, function, params):
     #    ml.levels[i].R = ml.levels[i].R.astype(A.dtype)
 
     for i in range(nr_levels-1):
-        ml.levels[i].P = csr_matrix(ml.levels[i].P)
-        ml.levels[i].R = csr_matrix(ml.levels[i].R)
+        mg.ml.levels[i].P = csr_matrix(mg.ml.levels[i].P)
+        mg.ml.levels[i].R = csr_matrix(mg.ml.levels[i].R)
 
     """
     # ------------------------------------------------------------------------------------
@@ -503,13 +520,14 @@ def mlmc(A, function, params):
     # FIXME : theoretical esimation goes here
 
     if not (function_name=="exponential"):
-        print("\nCreating solver with PyAMG for each level ...")
-        ml_solvers = list()
-        for i in range(nr_levels-1):
-            [mlx, work] = adaptive_sa_solver(ml.levels[i].A, num_candidates=2, candidate_iters=5, improvement_iters=8,
-                                             strength='symmetric', aggregate='standard', max_levels=9)
-            ml_solvers.append(mlx)
-        print("... done")
+        if not params['problem_name']=='schwinger':
+            print("\nCreating solver with PyAMG for each level ...")
+            ml_solvers = list()
+            for i in range(nr_levels-1):
+                [mlx, work] = adaptive_sa_solver(mg.ml.levels[i].A, num_candidates=2, candidate_iters=5, improvement_iters=8,
+                                                 strength='symmetric', aggregate='standard', max_levels=9)
+                ml_solvers.append(mlx)
+            print("... done")
 
     function_tol = 1e-5
 
@@ -559,7 +577,11 @@ def mlmc(A, function, params):
                 x = gamma5_application(x,0,params['dof'])
 
         if not (function_name=="exponential"):
-            z,num_iters = function_sparse(A,x,function_tol,ml_solvers[0],function_name,spec_name)
+            if params['problem_name']=='schwinger':
+                mg.level_nr = 0
+                z,num_iters = mg_solve( A,x,function_tol )
+            else:
+                z,num_iters = function_sparse(A,x,function_tol,ml_solvers[0],function_name,spec_name)
         else:
             z,num_iters = function_sparse(A,x,function_tol,function,function_name,spec_name)
 
@@ -603,8 +625,8 @@ def mlmc(A, function, params):
 
     print("")
 
-    tol_fraction0 = 0.5 # = 0.65/8.0
-    tol_fraction1 = 0.5 # = 0.28*5.0
+    tol_fraction0 = 0.3 # = 0.65/8.0
+    tol_fraction1 = 0.3 # = 0.28*5.0
 
     cummP = sp.sparse.identity(N,dtype=A.dtype)
     cummR = sp.sparse.identity(N,dtype=A.dtype)
@@ -613,13 +635,13 @@ def mlmc(A, function, params):
 
     if not (function_name=="exponential"):
         # coarsest-level inverse
-        Acc = ml.levels[nr_levels-1].A
+        Acc = mg.ml.levels[nr_levels-1].A
         Ncc = Acc.shape[0]
         np_Acc = Acc.todense()
         np_Acc_inv = np.linalg.inv(np_Acc)
         np_Acc_fnctn = np_Acc_inv[:,:]
     else:
-        np_Acc_fnctn = expm( -ml.levels[nr_levels-1].A )
+        np_Acc_fnctn = expm( -mg.ml.levels[nr_levels-1].A )
 
     for i in range(nr_levels-1):
 
@@ -635,11 +657,11 @@ def mlmc(A, function, params):
         level_trace_tol  = abs(trace_tol*rough_trace*tol_fctr)
 
         # fine and coarse matrices
-        Af = ml.levels[i].A
-        Ac = ml.levels[i+1].A
+        Af = mg.ml.levels[i].A
+        Ac =mg. ml.levels[i+1].A
         # P and R
-        R = ml.levels[i].R
-        P = ml.levels[i].P
+        R = mg.ml.levels[i].R
+        P = mg.ml.levels[i].P
 
         print("Computing for level "+str(i)+"...")
 
@@ -670,7 +692,12 @@ def mlmc(A, function, params):
                 function.putvalue('Ax',Af.todense())
 
             if not (function_name=="exponential"):
-                z,num_iters = function_sparse(Af,x,level_solver_tol,ml_solvers[i],function_name,spec_name)
+                if params['problem_name']=='schwinger':
+                    mg.level_nr = i
+                    z,num_iters = mg_solve( Af,x,level_solver_tol )
+                    #print(num_iters)
+                else:
+                    z,num_iters = function_sparse(Af,x,level_solver_tol,ml_solvers[i],function_name,spec_name)
             else:
                 z,num_iters = function_sparse(Af,x,level_solver_tol,function,function_name,spec_name)
 
@@ -706,7 +733,13 @@ def mlmc(A, function, params):
                     function.putvalue('Ax',Ac.todense())
 
                 if not (function_name=="exponential"):
-                    y,num_iters = function_sparse(Ac,xc,level_solver_tol,ml_solvers[i+1],function_name,spec_name)
+                    if params['problem_name']=='schwinger':
+                        mg.level_nr = i+1
+                        y,num_iters = mg_solve( Ac,xc,level_solver_tol )
+                        #print(num_iters)
+                    else:
+                        y,num_iters = function_sparse(Ac,xc,level_solver_tol,ml_solvers[i+1],function_name,spec_name)
+                        print(num_iters)
                 else:
                     y,num_iters = function_sparse(Ac,xc,level_solver_tol,function,function_name,spec_name)
             #y,num_iters = solver_sparse(Ac,xc,level_solver_tol,ml_solvers[i+1],"mg")
@@ -749,7 +782,7 @@ def mlmc(A, function, params):
     # compute now at the coarsest level
 
     # in case the coarsest matrix is 1x1
-    if ml.levels[nr_levels-1].A.shape[0]==1:
+    if mg.ml.levels[nr_levels-1].A.shape[0]==1:
 
         output_params['results'][nr_levels-1]['nr_ests'] += 1
         # set trace and standard deviation
@@ -890,10 +923,10 @@ def mlmc(A, function, params):
             output_params['results'][i]['level_complexity'] = output_params['results'][i]['function_iters']*flopsV(len(slvr.levels), slvr.levels, 0)
 
     if params['coarsest_level_directly']==True:
-        output_params['results'][nr_levels-1]['level_complexity'] = pow(ml.levels[nr_levels-1].A.shape[0],3) + \
-                                                                    output_params['results'][nr_levels-1]['function_iters']*pow(ml.levels[nr_levels-1].A.shape[0],2)
+        output_params['results'][nr_levels-1]['level_complexity'] = pow(mg.ml.levels[nr_levels-1].A.shape[0],3) + \
+                                                                    output_params['results'][nr_levels-1]['function_iters']*pow(mg.ml.levels[nr_levels-1].A.shape[0],2)
     else:
-        output_params['results'][nr_levels-1]['level_complexity'] = output_params['results'][nr_levels-1]['function_iters']*(ml.levels[nr_levels-1].A.shape[0]*ml.levels[nr_levels-1].A.shape[0])
+        output_params['results'][nr_levels-1]['level_complexity'] = output_params['results'][nr_levels-1]['function_iters']*(mg.ml.levels[nr_levels-1].A.shape[0]*mg.ml.levels[nr_levels-1].A.shape[0])
 
     #print( output_params['results'][nr_levels-1]['solver_iters'] * (ml.levels[nr_levels-1].A.shape[0]*ml.levels[nr_levels-1].A.shape[0]) )
 
