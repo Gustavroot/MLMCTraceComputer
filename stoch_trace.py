@@ -5,7 +5,7 @@ import scipy as sp
 from function import function_sparse
 from math import sqrt, pow
 import pyamg
-from utils import flopsV
+from utils import flopsV,flopsV_manual
 from pyamg.aggregation.adaptive import adaptive_sa_solver
 from aggregation import manual_aggregation
 from scipy.sparse import csr_matrix
@@ -104,6 +104,12 @@ def write_png(A, filename):
 # compute tr(A^{-1}) via Hutchinson
 def hutchinson(A, function, params):
 
+    mg.level_nr = 0
+    mg.coarsest_iters = 0
+    mg.coarsest_iters_tot = 0
+    mg.coarsest_iters_avg = 0
+    mg.nr_calls = 0
+
     #if params['problem_name']=='schwinger':
     #    global ml
 
@@ -166,8 +172,26 @@ def hutchinson(A, function, params):
                 Sy,Ux = eigsh( A,k=nr_deflat_vctrs,which='SM',tol=tolx )
                 Vx = np.copy(Ux)
             else:
-                Ux,Sy,Vy = svds( A,k=nr_deflat_vctrs,which='SM',tol=tolx )
-                Vx = Vy.transpose().conjugate()
+                if params['problem_name']=='schwinger':
+                    # extract eigenpairs of Q
+                    print("Constructing sparse Q ...")
+                    Q = A.copy()
+                    mat_size = int(Q.shape[0]/2)
+                    Q[mat_size:,:] = -Q[mat_size:,:]
+                    print("... done")
+                    print("Eigendecomposing Q ...")
+                    Sy,Vx = eigsh( Q,k=nr_deflat_vctrs,which='LM',tol=tolx,sigma=0.0 )
+                    sgnS = np.ones(Sy.shape[0])
+                    for i in range(Sy.shape[0]): sgnS[i]*=(2.0*float(Sy[i]>0)-1.0)
+                    Sy = np.multiply(Sy,sgnS)
+                    Ux = np.copy(Vx)
+                    for idx,sgn in enumerate(sgnS) : Ux[:,idx] *= sgn
+                    mat_size = int(Ux.shape[0]/2)
+                    Ux[mat_size:,:] = -Ux[mat_size:,:]
+                    print("... done")
+                else:
+                    Ux,Sy,Vy = svds( A,k=nr_deflat_vctrs,which='SM',tol=tolx )
+                    Vx = Vy.transpose().conjugate()
         Sx = np.diag(Sy)
         end = time.time()
         print("... done")
@@ -294,7 +318,7 @@ def hutchinson(A, function, params):
 
         if params['problem_name']=='schwinger':
             mg.level_nr = 0
-            z,num_iters = mg_solve( A,x,function_tol )
+            z,num_iters = mg_solve( A,x_def,function_tol )
         else:
             z,num_iters = function_sparse(A,x_def,rough_function_tol,function,function_name,spec_name)
 
@@ -323,7 +347,10 @@ def hutchinson(A, function, params):
     result['nr_ests'] = i
     result['function_iters'] = function_iters
     if function_name=="inverse" and  spec_name=='mg':
-        result['total_complexity'] = flopsV(len(function.levels), function.levels, 0)*function_iters
+        if not params['problem_name']=='schwinger':
+            result['total_complexity'] = flopsV(len(function.levels), function.levels, 0)*function_iters
+        else:
+            result['total_complexity'] = flopsV_manual(len(mg.ml.levels), mg.ml.levels, 0)*function_iters
 
     return result
 
@@ -625,8 +652,8 @@ def mlmc(A, function, params):
 
     print("")
 
-    tol_fraction0 = 0.3 # = 0.65/8.0
-    tol_fraction1 = 0.3 # = 0.28*5.0
+    tol_fraction0 = 0.45 # = 0.65/8.0
+    tol_fraction1 = 0.45 # = 0.28*5.0
 
     cummP = sp.sparse.identity(N,dtype=A.dtype)
     cummR = sp.sparse.identity(N,dtype=A.dtype)
@@ -918,9 +945,12 @@ def mlmc(A, function, params):
     if not (function_name=="exponential"):
         for i in range(nr_levels-1):
             #output_params['results'][i]['level_complexity'] += output_params['results'][i]['solver_iters']*ml_solvers[i].cycle_complexity()
-            slvr = ml_solvers[i]
             #print( "flops/cycle = "+str(flopsV(len(slvr.levels), slvr.levels, 0)) )
-            output_params['results'][i]['level_complexity'] = output_params['results'][i]['function_iters']*flopsV(len(slvr.levels), slvr.levels, 0)
+            if not params['problem_name']=='schwinger':
+                slvr = ml_solvers[i]
+                output_params['results'][i]['level_complexity'] = output_params['results'][i]['function_iters']*flopsV(len(slvr.levels), slvr.levels, 0)
+            else:
+                output_params['results'][i]['level_complexity'] = output_params['results'][i]['function_iters']*flopsV_manual(len(mg.ml.levels), mg.ml.levels, i)
 
     if params['coarsest_level_directly']==True:
         output_params['results'][nr_levels-1]['level_complexity'] = pow(mg.ml.levels[nr_levels-1].A.shape[0],3) + \

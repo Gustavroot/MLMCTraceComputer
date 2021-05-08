@@ -7,6 +7,11 @@ from pyamg.krylov import fgmres
 ml = []
 level_nr = 0
 total_levels = 0
+coarsest_iters = 0
+coarsest_iters_tot = 0
+coarsest_iters_avg = 0
+nr_calls = 0
+smoother_iters = 2
 
 
 def one_mg_step( b ):
@@ -14,6 +19,11 @@ def one_mg_step( b ):
     global ml
     global level_nr
     global total_levels
+    global coarsest_iters
+    global coarsest_iters_tot
+    global coarsest_iters_avg
+    global nr_calls
+    #global smoother_iters
 
     level_id = total_levels-level_nr
 
@@ -34,7 +44,7 @@ def one_mg_step( b ):
         # 1. build the residual
         rs[i] = bs[i]-ml.levels[i+level_nr].A*xs[i]
         # 2. smooth
-        e, exitCode = lgmres( ml.levels[i+level_nr].A,rs[i],maxiter=2 )
+        e, exitCode = lgmres( ml.levels[i+level_nr].A,rs[i],maxiter=smoother_iters )
         # 3. update solution
         xs[i] += e
         # 4. update residual
@@ -43,7 +53,15 @@ def one_mg_step( b ):
         bs[i+1] = ml.levels[i+level_nr].R*rs[i]
 
     # coarsest level solve
-    xs[i], exitCode = lgmres( ml.levels[i+level_nr].A,bs[i],tol=1.0e-4 )
+    num_iters = 0
+    def callback(xk):
+        nonlocal num_iters
+        num_iters += 1
+    xs[i], exitCode = lgmres( ml.levels[i+level_nr].A,bs[i],tol=1.0e-4,callback=callback )
+    coarsest_iters = num_iters
+    nr_calls += 1
+    coarsest_iters_tot += coarsest_iters
+    coarsest_iters_avg = coarsest_iters_tot/nr_calls
 
     # go up in the V-cycle
     for i in range(level_id-2,-1,-1):
@@ -52,7 +70,7 @@ def one_mg_step( b ):
         # 2. build the residual
         rs[i] = bs[i]-ml.levels[i+level_nr].A*xs[i]
         # 3. smooth
-        e, exitCode = lgmres( ml.levels[i+level_nr].A,rs[i],maxiter=2 )
+        e, exitCode = lgmres( ml.levels[i+level_nr].A,rs[i],maxiter=smoother_iters )
         # 4. update solution
         xs[i] += e
 
@@ -66,7 +84,6 @@ def mg_solve( A,b,tol ):
     #print( np.linalg.norm(b-A*x)/np.linalg.norm(b) )
 
     num_iters = 0
-
     def callback(xk):
         nonlocal num_iters
         num_iters += 1
