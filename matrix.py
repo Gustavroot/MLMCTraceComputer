@@ -4,7 +4,11 @@ from scipy.sparse import identity
 from scipy.sparse import csr_matrix
 import matplotlib.pylab as plt
 
+import numpy
+
 import numpy as np
+
+import scipy as sp
 
 from scipy.sparse.linalg import eigsh
 
@@ -22,6 +26,9 @@ def loadMatrix(matrix_name, params):
         N = params['N']
         alpha = params['alpha']
         beta = params['beta']
+
+        #sp.io.savemat('gl_matrix_L'+str(N)+'_beta'+str(beta)+'_alpha'+str(alpha)+'.mat', mdict={'GL_'+str(N): gauge_laplacian(N, alpha, beta)})
+        #exit(0)
 
         return (gauge_laplacian(N, alpha, beta),None)
 

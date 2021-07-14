@@ -291,12 +291,12 @@ def set_params(example_name):
         matrix_params = dict()
 
         # to modify
-        matrix_params['N'] = 32
+        matrix_params['N'] = 64
         matrix_params['alpha'] = 1.0
-        matrix_params['beta'] = 0.001
+        matrix_params['beta'] = 0.009
         params['matrix'] = 'gauge_laplacian'
         matrix_params['problem_name'] = 'gauge_laplacian'
-        params['trace_tol'] = 0.2e-3
+        params['trace_tol'] = 1.0e-3
         params['trace_use_Q'] = False
         params['trace_multilevel_construction'] = 'pyamg'
         params['max_nr_levels'] = 3
@@ -309,7 +309,7 @@ def set_params(example_name):
         params['function'] = 'inverse'
         #params['function'] = 'exponential'
 
-        params['nr_deflat_vctrs'] = 0
+        params['nr_deflat_vctrs'] = 16
 
         # fixed parameters
         params['matrix_params'] = matrix_params
