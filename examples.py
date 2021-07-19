@@ -60,10 +60,10 @@ def EXAMPLE_001(params):
     trace_params['aggrs'] = params['aggrs']
     trace_params['dof'] = params['dof']
     trace_params['function'] = params['function']
-    start = time.time()
+    #start = time.time()
     result = hutchinson(A, function, trace_params)
-    end = time.time()
-    print("Total Hutchinson time = "+str(end-start)+" cpu seconds")
+    #end = time.time()
+    #print("Total Hutchinson time = "+str(end-start)+" cpu seconds")
     trace = result['trace']
     std_dev = result['std_dev']
     nr_ests = result['nr_ests']
@@ -144,10 +144,10 @@ def EXAMPLE_002(params):
     trace_params['aggrs'] = params['aggrs']
     trace_params['dof'] = params['dof']
     trace_params['function'] = params['function']
-    start = time.time()
+    #start = time.time()
     result = mlmc(A, function, trace_params)
-    end = time.time()
-    print("Total MLMC time = "+str(end-start)+" cpu seconds")
+    #end = time.time()
+    #print("Total MLMC time = "+str(end-start)+" cpu seconds")
 
     print(" -- matrix : "+matrix_name)
     print(" -- matrix size : "+str(A.shape[0])+"x"+str(A.shape[1]))

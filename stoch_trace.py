@@ -195,7 +195,7 @@ def hutchinson(A, function, params):
         Sx = np.diag(Sy)
         end = time.time()
         print("... done")
-        print("elapsed time = "+str(end-start))
+        print("Time to compute singular vectors (or eigenvectors) = "+str(end-start))
 
         try:
             nr_cores = int(os.getenv('OMP_NUM_THREADS'))
@@ -208,12 +208,15 @@ def hutchinson(A, function, params):
     # tr( exp(-L) *(I-U1*U1H)) = (1/n)sum^{n} ( ziH * EXPOFIT( -L,(I-U1*U1H)*zi ) )
 
     if nr_deflat_vctrs>0:
+        start = time.time()
         # compute low-rank part of deflation
         if not function_name=="exponential":
             small_A = np.dot(Vx.transpose().conjugate(),Ux) * np.linalg.inv(Sx)
         else:
             small_A = np.dot(Vx.transpose().conjugate(),Ux) * expm(-Sx)
         tr1 = np.trace(small_A)
+        end = time.time()
+        print("\nTime to compute the small-matrix contribution in Deflated Hutchinson : "+str(end-start))
     else:
         tr1 = 0.0
 
@@ -239,6 +242,9 @@ def hutchinson(A, function, params):
     # pre-compute a rough estimation of the trace, to set then a tolerance
     nr_rough_iters = 5
     ests = np.zeros(nr_rough_iters, dtype=A.dtype)
+
+    start = time.time()
+
     # main Hutchinson loop
     for i in range(nr_rough_iters):
 
@@ -275,6 +281,9 @@ def hutchinson(A, function, params):
         e = np.vdot(x,z)
         ests[i] = e
 
+    end = time.time()
+    print("Time to compute rough estimation of trace : "+str(end-start)+"\n")
+
     rough_trace = np.sum(ests[0:nr_rough_iters])/(nr_rough_iters)
 
     print("\n** rough estimation of the trace : "+str(rough_trace))
@@ -289,6 +298,9 @@ def hutchinson(A, function, params):
 
     function_iters = 0
     ests = np.zeros(trace_max_nr_ests, dtype=A.dtype)
+
+    start = time.time()
+
     # main Hutchinson loop
     for i in range(trace_max_nr_ests):
 
@@ -340,8 +352,11 @@ def hutchinson(A, function, params):
         if i>=5 and error_est<rough_trace_tol:
             break
 
+    end = time.time()
+    print("\nTime to compute the trace with Deflated Hutchinson (excluding rough trace and excluding time for eigenvectors computation) : "+str(end-start)+"\n")
+
     result = dict()
-    print(tr1)
+    #print(tr1)
     result['trace'] = ests_avg+tr1
     result['std_dev'] = ests_dev
     result['nr_ests'] = i
@@ -466,7 +481,7 @@ def mlmc(A, function, params):
         raise Exception("The specified <trace_multilevel_constructor> does not exist.")
     end = time.time()
     print("... done")
-    print("elapsed time = "+str(end-start))
+    print("Elapsed time to compute the multigrid hierarchy = "+str(end-start))
     print("IMPORTANT : this ML hierarchy was computed with 1 core i.e. elapsed time = "+str(end-start)+" cpu seconds")
 
     print("\nMultilevel information:")
@@ -582,6 +597,9 @@ def mlmc(A, function, params):
     # pre-compute a rough estimate of the trace, to set then a tolerance
     nr_rough_iters = 5
     ests = np.zeros(nr_rough_iters, dtype=A.dtype)
+
+    start = time.time()
+
     # main Hutchinson loop
     for i in range(nr_rough_iters):
 
@@ -627,6 +645,9 @@ def mlmc(A, function, params):
 
     print("... done \n")
 
+    end = time.time()
+    print("Time to compute rough estimation of the trace : "+str(end-start)+"\n")
+
     print("** rough estimation of the trace : "+str(rough_trace))
 
     # setting to zero the counters and results to be returned
@@ -669,6 +690,8 @@ def mlmc(A, function, params):
         np_Acc_fnctn = np_Acc_inv[:,:]
     else:
         np_Acc_fnctn = expm( -mg.ml.levels[nr_levels-1].A )
+
+    start = time.time()
 
     for i in range(nr_levels-1):
 
@@ -941,6 +964,9 @@ def mlmc(A, function, params):
             # set trace and standard deviation
             output_params['results'][nr_levels-1]['ests_avg'] = ests_avg+tr1c
             output_params['results'][nr_levels-1]['ests_dev'] = ests_dev
+
+    end = time.time()
+    print("\nTime to compute trace with MLMC (excluding rough trace and excluding setup time for the multigrid hierarchy) : "+str(end-start))
 
     if not (function_name=="exponential"):
         for i in range(nr_levels-1):
