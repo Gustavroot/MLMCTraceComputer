@@ -346,7 +346,7 @@ def hutchinson(A, function, params):
         ests_dev = sqrt(   np.sum(   np.square(np.abs(ests[0:(i+1)]-ests_avg))   )/(i+1)   )
         error_est = ests_dev/sqrt(i+1)
 
-        print(str(i)+" .. "+str(ests_avg)+" .. "+str(rough_trace)+" .. "+str(error_est)+" .. "+str(rough_trace_tol)+" .. "+str(num_iters))
+        #print(str(i)+" .. "+str(ests_avg)+" .. "+str(rough_trace)+" .. "+str(error_est)+" .. "+str(rough_trace_tol)+" .. "+str(num_iters))
 
         # break condition
         if i>=5 and error_est<rough_trace_tol:
@@ -417,7 +417,7 @@ def mlmc(A, function, params):
 
         for i in range(max_nr_levels-1):
 
-            print(i)
+            #print(i)
 
             print(mg.ml.levels[i].A)
 
@@ -630,7 +630,7 @@ def mlmc(A, function, params):
         else:
             z,num_iters = function_sparse(A,x,function_tol,function,function_name,spec_name)
 
-        print(num_iters)
+        #print(num_iters)
 
         if use_Q:
             if params['problem_name']=='schwinger':
@@ -673,8 +673,14 @@ def mlmc(A, function, params):
 
     print("")
 
-    tol_fraction0 = 0.45 # = 0.65/8.0
-    tol_fraction1 = 0.45 # = 0.28*5.0
+    # FIXME : this has to be generalized slightly to include stochastic coarsest level
+    if nr_levels<3 : raise Exception("Number of levels restricted to >2 for now ...")
+    if nr_levels==3:
+        tol_fraction0 = 0.5
+        tol_fraction1 = 0.5
+    else:
+        tol_fraction0 = 1.0/3.0
+        tol_fraction1 = 1.0/3.0
 
     cummP = sp.sparse.identity(N,dtype=A.dtype)
     cummR = sp.sparse.identity(N,dtype=A.dtype)
@@ -789,7 +795,7 @@ def mlmc(A, function, params):
                         #print(num_iters)
                     else:
                         y,num_iters = function_sparse(Ac,xc,level_solver_tol,ml_solvers[i+1],function_name,spec_name)
-                        print(num_iters)
+                        #print(num_iters)
                 else:
                     y,num_iters = function_sparse(Ac,xc,level_solver_tol,function,function_name,spec_name)
             #y,num_iters = solver_sparse(Ac,xc,level_solver_tol,ml_solvers[i+1],"mg")
@@ -809,7 +815,7 @@ def mlmc(A, function, params):
             ests_dev = sqrt(np.sum(np.square(np.abs(ests[0:(j+1)]-ests_avg)))/(j+1))
             error_est = ests_dev/sqrt(j+1)
 
-            print(str(j)+" .. "+str(ests_avg)+" .. "+str(error_est)+" .. "+str(level_trace_tol))
+            #print(str(j)+" .. "+str(ests_avg)+" .. "+str(error_est)+" .. "+str(level_trace_tol))
 
             # break condition
             if j>=5 and error_est<level_trace_tol:
@@ -954,7 +960,7 @@ def mlmc(A, function, params):
                 ests_dev = sqrt(np.sum(np.square(np.abs(ests[0:(i+1)]-ests_avg)))/(i+1))
                 error_est = ests_dev/sqrt(i+1)
 
-                print(str(i)+" .. "+str(ests_avg)+" .. "+str(error_est)+" .. "+str(level_trace_tol))
+                #print(str(i)+" .. "+str(ests_avg)+" .. "+str(error_est)+" .. "+str(level_trace_tol))
 
                 # break condition
                 if i>=5 and error_est<level_trace_tol:

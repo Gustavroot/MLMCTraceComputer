@@ -291,7 +291,7 @@ def set_params(example_name):
         matrix_params = dict()
 
         # to modify
-        matrix_params['N'] = 64
+        matrix_params['N'] = 128
         matrix_params['alpha'] = 1.0
         matrix_params['beta'] = 0.009
         params['matrix'] = 'gauge_laplacian'

@@ -35,7 +35,7 @@ if __name__=='__main__':
     # Gauge Laplacian
     os.environ['OMP_NUM_THREADS'] = '1'
     G103()
-    os.environ['OMP_NUM_THREADS'] = '24'
+    os.environ['OMP_NUM_THREADS'] = '1'
     G203()
 
     # Laplace 2D
