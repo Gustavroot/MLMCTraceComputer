@@ -162,7 +162,8 @@ def set_params(example_name):
         matrix_params['N'] = 128
         params['matrix'] = 'mat_schwinger128x128b3phasenum11000.mat'
         matrix_params['problem_name'] = 'schwinger'
-        params['trace_tol'] = 0.5e-2
+        #params['trace_tol'] = 3.0e-3
+        params['trace_tol'] = 1.0e-3
         params['trace_use_Q'] = False
         params['trace_multilevel_construction'] = 'manual_aggregation'
         #params['trace_multilevel_construction'] = 'pyamg'
@@ -172,12 +173,13 @@ def set_params(example_name):
 
         params['aggrs'] = [4*4,4*4,4*4]
         params['dof'] = [2,4,4,4]
-        params['nr_deflat_vctrs'] = 32
+        params['nr_deflat_vctrs'] = 512
 
         #matrix_params['mass'] = -0.13750
         #matrix_params['mass'] = -0.13
         # 0.13353501
-        matrix_params['mass'] = -0.132
+        #matrix_params['mass'] = -0.132
+        matrix_params['mass'] = -0.1332
 
         params['function'] = 'inverse'
 

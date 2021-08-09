@@ -13,6 +13,8 @@ coarsest_iters_avg = 0
 nr_calls = 0
 smoother_iters = 2
 
+coarsest_lev_iters = [0,0,0,0,0,0,0,0,0,0]
+
 
 def one_mg_step( b ):
 
@@ -24,6 +26,8 @@ def one_mg_step( b ):
     global coarsest_iters_avg
     global nr_calls
     #global smoother_iters
+
+    global coarsest_lev_iters
 
     level_id = total_levels-level_nr
 
@@ -44,7 +48,7 @@ def one_mg_step( b ):
         # 1. build the residual
         rs[i] = bs[i]-ml.levels[i+level_nr].A*xs[i]
         # 2. smooth
-        e, exitCode = lgmres( ml.levels[i+level_nr].A,rs[i],maxiter=smoother_iters )
+        e, exitCode = lgmres( ml.levels[i+level_nr].A,rs[i],tol=1.0e-20,maxiter=smoother_iters )
         # 3. update solution
         xs[i] += e
         # 4. update residual
@@ -53,14 +57,21 @@ def one_mg_step( b ):
         bs[i+1] = ml.levels[i+level_nr].R*rs[i]
 
     # coarsest level solve
+    #print(coarsest_iters_tot)
     num_iters = 0
     def callback(xk):
         nonlocal num_iters
         num_iters += 1
     xs[i], exitCode = lgmres( ml.levels[i+level_nr].A,bs[i],tol=1.0e-4,callback=callback )
+    # FIXME : number 30 hardcoded
+    #xs[i], exitCode = lgmres( ml.levels[i+level_nr].A,bs[i],tol=1.0e-30,callback=callback,maxiter=30 )
+    coarsest_lev_iters[level_nr] += num_iters
+    #print(num_iters)
     coarsest_iters = num_iters
     nr_calls += 1
     coarsest_iters_tot += coarsest_iters
+    #print(coarsest_iters_tot)
+    #print("")
     coarsest_iters_avg = coarsest_iters_tot/nr_calls
 
     # go up in the V-cycle
@@ -70,7 +81,7 @@ def one_mg_step( b ):
         # 2. build the residual
         rs[i] = bs[i]-ml.levels[i+level_nr].A*xs[i]
         # 3. smooth
-        e, exitCode = lgmres( ml.levels[i+level_nr].A,rs[i],maxiter=smoother_iters )
+        e, exitCode = lgmres( ml.levels[i+level_nr].A,rs[i],tol=1.0e-20,maxiter=smoother_iters )
         # 4. update solution
         xs[i] += e
 

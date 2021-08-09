@@ -111,6 +111,9 @@ def manual_aggregation(A, dof=[2,2,2], aggrs=[2*2,2*2], max_levels=3, dim=2, acc
         else:
             raise Exception("<accuracy_eigvs> does not have a possible value.")
 
+        # FIXME : hardcoded value for eigensolving tolerance for now
+        tolx = 1.0e-5
+
         #eigvals,eig_vecsx = eigsh(Al, k=nt*dof[i+1], which='SM', return_eigenvectors=True, tol=1e-5, maxiter=1000000)
         #eigvals,eig_vecsx = eigs(Al, k=nt*dof[i+1], which='SM', return_eigenvectors=True, tol=1e-2, maxiter=1000000)
 
@@ -122,7 +125,8 @@ def manual_aggregation(A, dof=[2,2,2], aggrs=[2*2,2*2], max_levels=3, dim=2, acc
             eigvals,eig_vecsx = eigs( Al, k=nt*dof[i+1], which='LM', tol=tolx, maxiter=1000000, sigma=0.0, ncv=ncvx )
             #eigvals,eig_vecsx = eigsh( Al, k=nt*dof[i+1], which='SM', tol=tolx, maxiter=1000000 )
         else:
-            eigvals,eig_vecsx = eigs( Al, k=nt*dof[i+1], which='LM', tol=1.0e-5, maxiter=1000000, sigma=0.0 )
+            #eigvals,eig_vecsx = eigs( Al, k=nt*dof[i+1], which='LM', tol=1.0e-5, maxiter=1000000, sigma=0.0 )
+            eigvals,eig_vecsx = eigs( Al, k=nt*dof[i+1], which='LM', tol=tolx, maxiter=1000000, sigma=0.0 )
             #eigvals,eig_vecsx = eigsh( Al, k=nt*dof[i+1], which='SM', tol=1.0e-5, maxiter=1000000 )
 
         #print(eigvals)
@@ -243,6 +247,7 @@ def manual_aggregation(A, dof=[2,2,2], aggrs=[2*2,2*2], max_levels=3, dim=2, acc
         ml.levels.append(LevelML())
         ml.levels[i+1].A = Al.copy()
 
+        """
         if sys_type=='schwinger':
 
             #Pl2 = csr_matrix(Px, dtype=Px.dtype)
@@ -280,6 +285,7 @@ def manual_aggregation(A, dof=[2,2,2], aggrs=[2*2,2*2], max_levels=3, dim=2, acc
             if Al.shape[0] <= min_coarsest_size: break
 
         print("")
+        """
 
     print("\tNonzeros = "+str(Al.count_nonzero()))
     print("\tsize(A) = "+str(Al.shape))

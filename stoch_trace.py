@@ -110,6 +110,8 @@ def hutchinson(A, function, params):
     mg.coarsest_iters_avg = 0
     mg.nr_calls = 0
 
+    mg.coarsest_lev_iters[0] = 0
+
     #if params['problem_name']=='schwinger':
     #    global ml
 
@@ -152,6 +154,9 @@ def hutchinson(A, function, params):
         ncvx = None
     else:
         raise Exception("<accuracy_eigvs> does not have a possible value.")
+
+    # FIXME : hardcoded value for eigensolving tolerance for now
+    tolx = 1.0e-14
 
     if nr_deflat_vctrs>0:
         print("Computing SVD (finest level) ...")
@@ -300,6 +305,7 @@ def hutchinson(A, function, params):
     ests = np.zeros(trace_max_nr_ests, dtype=A.dtype)
 
     start = time.time()
+    mg.coarsest_lev_iters[0] = 0
 
     # main Hutchinson loop
     for i in range(trace_max_nr_ests):
@@ -346,7 +352,7 @@ def hutchinson(A, function, params):
         ests_dev = sqrt(   np.sum(   np.square(np.abs(ests[0:(i+1)]-ests_avg))   )/(i+1)   )
         error_est = ests_dev/sqrt(i+1)
 
-        #print(str(i)+" .. "+str(ests_avg)+" .. "+str(rough_trace)+" .. "+str(error_est)+" .. "+str(rough_trace_tol)+" .. "+str(num_iters))
+        print(str(i)+" .. "+str(ests_avg)+" .. "+str(rough_trace)+" .. "+str(error_est)+" .. "+str(rough_trace_tol)+" .. "+str(num_iters))
 
         # break condition
         if i>=5 and error_est<rough_trace_tol:
@@ -362,10 +368,17 @@ def hutchinson(A, function, params):
     result['nr_ests'] = i
     result['function_iters'] = function_iters
     if function_name=="inverse" and  spec_name=='mg':
+
         if not params['problem_name']=='schwinger':
             result['total_complexity'] = flopsV(len(function.levels), function.levels, 0)*function_iters
         else:
             result['total_complexity'] = flopsV_manual(len(mg.ml.levels), mg.ml.levels, 0)*function_iters
+            result['total_complexity'] += mg.ml.levels[len(mg.ml.levels)-1].A.nnz * mg.coarsest_lev_iters[0]
+
+        # add work due to deflation
+        # FIXME : the (harcoded) factor of 3 in the following line is due to non-sparse memory accesses
+        result['total_complexity'] += result['nr_ests']*(2*N*nr_deflat_vctrs)/3.0
+        #print(result['nr_ests']*(2*N*nr_deflat_vctrs))
 
     return result
 
@@ -490,6 +503,9 @@ def mlmc(A, function, params):
     # the actual number of levels
     nr_levels = len(mg.ml.levels)
     mg.total_levels = nr_levels
+
+    for i in range(nr_levels):
+        mg.coarsest_lev_iters[i] = 0
 
     if nr_levels<3:
         raise Exception("Use three or more levels.")
@@ -665,6 +681,8 @@ def mlmc(A, function, params):
         output_params['results'][i]['ests_dev'] = 0.0
         output_params['results'][i]['level_complexity'] = 0.0
 
+    #return output_params
+
     # compute level differences
     #level_trace_tol  = abs(trace_tol*rough_trace/sqrt(nr_levels-1))
     #level_solver_tol = level_trace_tol/N
@@ -679,13 +697,16 @@ def mlmc(A, function, params):
         tol_fraction0 = 0.5
         tol_fraction1 = 0.5
     else:
-        tol_fraction0 = 1.0/3.0
-        tol_fraction1 = 1.0/3.0
+        tol_fraction0 = 0.45 #1.0/3.0
+        tol_fraction1 = 0.45 #1.0/3.0
 
     cummP = sp.sparse.identity(N,dtype=A.dtype)
     cummR = sp.sparse.identity(N,dtype=A.dtype)
     cummP = csr_matrix(cummP)
     cummR = csr_matrix(cummR)
+
+    start = time.time()
+    mg.coarsest_lev_iters[0] = 0
 
     if not (function_name=="exponential"):
         # coarsest-level inverse
@@ -696,8 +717,6 @@ def mlmc(A, function, params):
         np_Acc_fnctn = np_Acc_inv[:,:]
     else:
         np_Acc_fnctn = expm( -mg.ml.levels[nr_levels-1].A )
-
-    start = time.time()
 
     for i in range(nr_levels-1):
 
@@ -757,6 +776,8 @@ def mlmc(A, function, params):
             else:
                 z,num_iters = function_sparse(Af,x,level_solver_tol,function,function_name,spec_name)
 
+            num_iters1 = num_iters
+
             output_params['results'][i]['function_iters'] += num_iters
 
             # reverting back the application of gamma
@@ -800,6 +821,8 @@ def mlmc(A, function, params):
                     y,num_iters = function_sparse(Ac,xc,level_solver_tol,function,function_name,spec_name)
             #y,num_iters = solver_sparse(Ac,xc,level_solver_tol,ml_solvers[i+1],"mg")
 
+            num_iters2 = num_iters
+
             output_params['results'][i+1]['function_iters'] += num_iters
 
             e1 = np.vdot(x0,cummP*z)
@@ -815,7 +838,7 @@ def mlmc(A, function, params):
             ests_dev = sqrt(np.sum(np.square(np.abs(ests[0:(j+1)]-ests_avg)))/(j+1))
             error_est = ests_dev/sqrt(j+1)
 
-            #print(str(j)+" .. "+str(ests_avg)+" .. "+str(error_est)+" .. "+str(level_trace_tol))
+            print(str(j)+" .. "+str(ests_avg)+" .. "+str(error_est)+" .. "+str(level_trace_tol)+" ("+str(num_iters1)+","+str(num_iters2)+")")
 
             # break condition
             if j>=5 and error_est<level_trace_tol:
@@ -982,7 +1005,9 @@ def mlmc(A, function, params):
                 slvr = ml_solvers[i]
                 output_params['results'][i]['level_complexity'] = output_params['results'][i]['function_iters']*flopsV(len(slvr.levels), slvr.levels, 0)
             else:
-                output_params['results'][i]['level_complexity'] = output_params['results'][i]['function_iters']*flopsV_manual(len(mg.ml.levels), mg.ml.levels, i)
+                #output_params['results'][i]['level_complexity'] = output_params['results'][i]['function_iters']*flopsV_manual(len(mg.ml.levels), mg.ml.levels, i)
+                output_params['results'][i]['level_complexity'] = output_params['results'][i]['function_iters']*flopsV_manual(i, mg.ml.levels, i)
+                output_params['results'][i]['level_complexity'] += mg.ml.levels[len(mg.ml.levels)-1].A.nnz * mg.coarsest_lev_iters[i]
 
     if params['coarsest_level_directly']==True:
         output_params['results'][nr_levels-1]['level_complexity'] = pow(mg.ml.levels[nr_levels-1].A.shape[0],3) + \
