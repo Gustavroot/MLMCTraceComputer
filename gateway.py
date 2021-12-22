@@ -298,7 +298,7 @@ def set_params(example_name):
         matrix_params['beta'] = 0.009
         params['matrix'] = 'gauge_laplacian'
         matrix_params['problem_name'] = 'gauge_laplacian'
-        params['trace_tol'] = 1.0e-3
+        params['trace_tol'] = 1.0e-1
         params['trace_use_Q'] = False
         params['trace_multilevel_construction'] = 'pyamg'
         params['max_nr_levels'] = 3
@@ -366,7 +366,7 @@ def G103():
     params = set_params('GL')
 
     # fixed parameters
-    params['spec_function'] = 'mg'
+    params['spec_function'] = 'cg'
     params['function_tol'] = 1e-3
     params['function_lambda_min'] = 1e-2
     params['aggregation_type'] = 'ASA'

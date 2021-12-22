@@ -27,14 +27,14 @@ if __name__=='__main__':
     #G201()
 
     # Schwinger 128^2
-    os.environ['OMP_NUM_THREADS'] = '1'
-    G102()
-    os.environ['OMP_NUM_THREADS'] = '1'
-    G202()
+    #os.environ['OMP_NUM_THREADS'] = '1'
+    #G102()
+    #os.environ['OMP_NUM_THREADS'] = '1'
+    #G202()
 
     # Gauge Laplacian
-    #os.environ['OMP_NUM_THREADS'] = '1'
-    #G103()
+    os.environ['OMP_NUM_THREADS'] = '1'
+    G103()
     #os.environ['OMP_NUM_THREADS'] = '1'
     #G203()
 

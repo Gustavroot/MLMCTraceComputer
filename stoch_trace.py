@@ -642,7 +642,13 @@ def mlmc(A, function, params):
                 mg.level_nr = 0
                 z,num_iters = mg_solve( A,x,function_tol )
             else:
-                z,num_iters = function_sparse(A,x,function_tol,ml_solvers[0],function_name,spec_name)
+            
+                if spec_name=='cg' or spec_name=='gmres':
+                    z,num_iters = function_sparse(A,x,function_tol,function,function_name,spec_name)
+                elif spec_name=='mg':
+                    z,num_iters = function_sparse(A,x,function_tol,ml_solvers[0],function_name,spec_name)
+                else:
+                    raise Exception('Only cg, gmres or mg allowed for solvers at the moment')
         else:
             z,num_iters = function_sparse(A,x,function_tol,function,function_name,spec_name)
 
@@ -772,7 +778,13 @@ def mlmc(A, function, params):
                     z,num_iters = mg_solve( Af,x,level_solver_tol )
                     #print(num_iters)
                 else:
-                    z,num_iters = function_sparse(Af,x,level_solver_tol,ml_solvers[i],function_name,spec_name)
+
+                    if spec_name=='cg' or spec_name=='gmres':
+                        z,num_iters = function_sparse(Af,x,level_solver_tol,function,function_name,spec_name)
+                    elif spec_name=='mg':
+                        z,num_iters = function_sparse(Af,x,level_solver_tol,ml_solvers[i],function_name,spec_name)
+                    else:
+                        raise Exception('Only cg, gmres or mg allowed for solvers at the moment')
             else:
                 z,num_iters = function_sparse(Af,x,level_solver_tol,function,function_name,spec_name)
 
@@ -815,8 +827,13 @@ def mlmc(A, function, params):
                         y,num_iters = mg_solve( Ac,xc,level_solver_tol )
                         #print(num_iters)
                     else:
-                        y,num_iters = function_sparse(Ac,xc,level_solver_tol,ml_solvers[i+1],function_name,spec_name)
-                        #print(num_iters)
+
+                        if spec_name=='cg' or spec_name=='gmres':
+                            y,num_iters = function_sparse(Ac,xc,level_solver_tol,function,function_name,spec_name)
+                        elif spec_name=='mg':
+                            y,num_iters = function_sparse(Ac,xc,level_solver_tol,ml_solvers[i+1],function_name,spec_name)
+                        else:
+                            raise Exception('Only cg, gmres or mg allowed for solvers at the moment')
                 else:
                     y,num_iters = function_sparse(Ac,xc,level_solver_tol,function,function_name,spec_name)
             #y,num_iters = solver_sparse(Ac,xc,level_solver_tol,ml_solvers[i+1],"mg")
